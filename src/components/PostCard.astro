@@ -43,7 +43,7 @@ const CardLink = preview ? 'div' : 'a';
           <span class="journal-card__art-sheen"></span>
         </div>
       }
-      {post.badge && <span class="journal-card__badge" title={post.badge}>
+      {post.badge && <span class="journal-card__badge" data-on-photo={post.cover ? 'yes' : undefined} title={post.badge}>
           <svg class="journal-card__clasp" viewBox="0 0 40 40" fill="none" aria-hidden="true">
             <defs>
               <radialGradient id="jc-enamel" cx="35%" cy="35%" r="65%">

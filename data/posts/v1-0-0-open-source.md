@@ -7,7 +7,7 @@ tags:
   - Astro
   - 版本更新
 date: '2026-11-04'
-cover: ''
+cover: '/images/cover-v1-0-0.webp'
 badge: '版本更新'
 draft: false
 publishedAt: '2026-11-04T03:30:00.000Z'

@@ -1,54 +1,97 @@
-# BaKaMiku 个人博客
+# BaKaMiku
 
-项目位置：`C:\Users\Miku\Documents\ChatGPT\New project`。
+一个写着玩、但每个细节都抠过的个人博客。Astro + Node 服务端渲染，没有数据库，文章就是 `data/posts` 下的 Markdown 文件。
 
-## 启动和检查
+## 它有什么
 
-- `npm run dev`：本地预览，默认 http://localhost:4321 。
-- `npm run check`：检查 Astro / TypeScript。
-- `npm run build`：构建用于部署的版本。
-- `npm run config:check`：打印当前生效的配置（密码打码）并检查 `.env` 漏项。
-- 本地卡片预览：http://localhost:4321/preview/cards 。展示有图、无图、长标题及多标签样式，示例内容不会写入文章数据；正式运行时此页面跳转到 404。
-- 配置分层、新增环境变量的步骤见 [CONFIG.md](CONFIG.md)。
-- 后台（`/admin`）的界面改版交接见 [ADMIN-REDESIGN-HANDOFF.md](ADMIN-REDESIGN-HANDOFF.md)。
-- 部署、环境变量与后台使用见 [DEPLOY.md](DEPLOY.md)；**第一次上服务器**按 [SERVER-SETUP.md](SERVER-SETUP.md) 从头做一遍（含 Node 版本、systemd、Nginx、权限、验收清单）。
+**内容** —— 文章、分类、标签、搜索、按发布时间排序；草稿与发布分离，保存只写文件，点发布才出现在首页。
 
-## 当前项目
+**首页** —— 会看时间的时间名片（日月图标、七段问候、节气农历）、每天三次的抽签、十二首歌的音乐盒、站点统计。明暗两套主题，四套分类封面色（没配图时按分类走，光斑位置由 slug 哈希算出来，同分类两张也不撞脸）。
 
-Astro + Node.js 博客，包含首页、文章列表、文章详情、关于页，以及 `/admin` Markdown 编辑后台。文章位于 `data/posts/`，上传内容位于 `data/uploads/`。后台配置保存在 `.env`，不要公开其中的内容。站点身份（名字、导航、主题色）在 `src/config/site.ts`，环境相关（密钥、域名、开关）在 `.env`，两者都由 `src/config/` 统一读取。
+**细节** —— 连点 logo 五次炸花瓣；滚动时御守角标会摆，停下来就静止；封面悬停有反光扫过；音乐盒吸附进侧栏时靠矩形重合做到零位移。
 
-## 2026-11-01 本次接续
+**后台** —— `/admin` 里写 Markdown、看预览、传图、存草稿、发布。
 
-用户要求修复缩小窗口后的拥挤布局，并参考 `C:\Users\Miku\WorkBuddy\2026-10-25-13-36-25` 中的两个 HTML 实例调整飘落效果。
+## 快速开始
 
-- 清理首页多轮叠加的布局样式，统一放在 `src/styles/global.css` 末尾。
-- 外层布局参考实例：小于 768px 隐藏两侧栏；768px 起保留 280px 左栏；1280px 起增加 280px 右栏。内容最大宽度 1760px，间距 16px。
-- 首页和文章列表根据实际可用空间自动排卡片：`repeat(auto-fill, minmax(min(100%, 340px), 1fr))`，避免卡片被固定列数挤窄。
-- 首页筛选项自动换行，取消横向滚动条。
-- `public/ambient.js` 使用 Canvas 绘制 21 个粒子。继续使用 `public/particles/` 已有花瓣和雪花素材；运动完全沿用樱花实例的逐帧算法：vx 为 -1.7～-1.2，vy 为 1.5～2.2，旋转每帧 0.03，透明度每帧减少 0.0003，尺寸为 40 × (0.5～1.1)。绕素材左上角旋转，顶部 y=0 重生，中心越出画面边界即重置。没有时间换算、中心旋转或额外摇摆。
-- 窗口尺寸变化只更新画布，不重新缩放粒子坐标，与实例一致；页面隐藏或开启减少动态效果时停止动画，恢复后继续。
+需要 **Node 22.23.4 以上**。
 
-验证：320–2560px 共 13 种宽度，无页面横向溢出，侧栏断点、卡片最小宽度、筛选换行正确。分类筛选、文章跳转、明暗主题、动画变化、减少动态效果通过浏览器检查。`npm run build` 成功；`npm run check` 为 0 errors / 0 warnings，另有后台旧代码的 13 条弃用提示。
+```bash
+npm install
+cp .env.example .env      # 填三个值，见下
+npm run dev               # http://localhost:4321
+```
 
-用户随后确认“完全沿用示例的运动参数，只保留当前素材”。现已执行，并以相同随机序列逐帧对比原 HTML 中的真实算法：21 个粒子连续 2000 帧的坐标、尺寸、角度、透明度和速度全部一致，包含越界重生。后续应先保留这组参考参数。
+`.env` 里真正非填不可的只有三个：
 
+| 变量 | 说明 |
+| --- | --- |
+| `ADMIN_PASSWORD` | `/admin` 登录密码，十六位以上随机串 |
+| `SESSION_SECRET` | 登录签名与访客去重盐，`openssl rand -hex 32` |
+| `PUBLIC_SITE_URL` | 对外地址，**不要带结尾斜杠** |
 
-- 首页对齐调整：顶部博客标识、Hero 介绍和下方个人资料卡共用同一容器宽度及左右边距；已检查 390、900、1280、1440、1920、2560px 的左边缘对齐。
+其余社交链接、备案号、功能开关留空就是「不显示」。改完跑 `npm run config:check` 自检，关键项漏了直接退出码 1。
 
-- 分类分为大类和小类：默认大类为技术笔记、项目、动漫，支持后台新建；现有 tags 作为文章所属大类下的小类。首页筛选栏只显示全部和三个大类，小类保留在卡片、详情及侧栏。后台使用大类/小类字段名称。旧项目作品、动漫游戏元数据及筛选链接会自动映射到新名称，文章文件无需批量改写。
+站点身份（站名、导航、slogan、主题色）在 `src/config/site.ts`，与环境无关，不用改 `.env`。
 
-- 大类与小类已合并为右侧“站点统计”卡片；站点信息仍单独显示。
-- 后台“大类”下方可新建大类，添加后自动选中；自定义分类保存在 data/categories.json，部署更新时保留整个 data/。首页、文章列表和统计从持久化配置读取大类，并兼容现有文章中的分类。
-- 小类输入支持中文逗号和英文逗号混用；前端与服务器都拆分、去空项并去重。新建大类、重复/无效输入、权限、并发添加、文章发布与重新打开、手机布局和重启持久化已在独立临时数据目录中验证，未添加测试内容到用户博客。
+## 音乐播放器
 
-- 保存与发布已分开：保存新文章仅写入草稿；发布才公开，记录服务器端首次发布时间 publishedAt。保存已发布文章更新正文但不下架、不改变排序。发布按钮在发布后变为“已发布”；列表明确标识草稿/已发布。首页、文章列表、分类和搜索均按发布时间倒序，同一天也可区分先后。显示日期单独保留；旧文章以原日期回退并在保存时固定。已在隔离数据目录验证草稿不可公开访问、保存/发布操作、同日先后、修改旧文章与日期不置顶、重复发布不置顶及重启持久化。
-- “站点统计”和“站点信息”的标题统一使用蓝色竖线、字号及间距。
+播放器不含音频文件，所有歌都走 `/meting/api?server=netease&type=url&id=<ID>`。`/meting` **不属于本项目**，它是 [Meting](https://github.com/metowolf/MetingAPI) —— 把网易云、QQ、酷狗、百度的播放地址和歌词统一成一个 URL 的中间层，需要自己架。
 
-- 头像与 Hero 已接入用户提供的素材。public/images/avatar.webp 用于顶部和资料卡头像；public/images/hero-spring.webp 是后续提供的无字樱花雪街原图，替换了共享链接中的带界面预览图。PNG 原图保留，实际页面使用 WebP（头像约 109KB，Hero 约 248KB）。电脑左文右人，手机保留面部并将文案置于下方；深色主题使用较深渐变。已验证 320–2560px、对齐、图片加载、按钮点击和主题切换。未重新生成或修改插画内容。
+1. 起一个 Meting 服务（Docker 最省事），监听本地端口，例如 3030
+2. nginx 反代，注意 `proxy_pass` 结尾的斜杠负责剥掉前缀：
 
-- 字体切换为用户桌面字体包中的 futomaru401.ttf（ID Pop Futomaru），保存于 public/fonts/id-pop-futomaru.ttf。此字体含部分空白占位字形，@font-face 使用从真实非空轮廓计算的 unicode-range，未覆盖字符回退到霞鹜文楷，代码块继续使用等宽字体。
-- Hero 改为按图片原始比例完整展示：桌面文字覆盖在左侧，900px 及以下文字置于图片下方，图片不裁切。个人卡片上方 profile-banner 从 74px 加高至 110px。已验证十种宽度、字体加载、完整比例、深色主题和按钮跳转；构建与类型检查通过。
+```nginx
+location /meting/ {
+    proxy_pass http://127.0.0.1:3030/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
 
-- 首屏改为参考图风格：首页导航固定叠在 Hero 插画上，白色文字、当前页下划线、轻透搜索框；下滚后切换为有背景的导航。Hero 使用 100dvh（兼容 100vh）刚好占满浏览器首屏，文章区紧接其后；开始阅读和底部箭头链接到 #articles。手机与低高度窗口分别调整文案和导航，配图根据窗口比例裁切以铺满首屏。
-- 最终字体采用 @fontsource/noto-sans-sc 本地提供的 Noto Sans SC，常规 400 / 半粗 600 / 粗体 700，替换日文粗圆体。试用的寒蝉圆体源文件存在简体空字形，未采用。已验证全部 Astro/TS 文案涉及的 313 个中文字在三种字重中都有字形。官方资料：https://notofonts.github.io/noto-docs/website/use/ 。
-- 已验证 320×640、390×844、768×1024、900×700、1440×900、1920×1080、2560×1440、844×390：Hero 从 y=0 到首屏底部，文章紧随 Hero，无横向溢出；阅读锚点、滚动导航、深浅主题和文章导航通过。构建与类型检查通过（后台旧代码仍有 13 条弃用提示）。
+3. 本地开发没有 nginx，把 `METING_TARGET` 指向你的 Meting 服务，`astro.config.mjs` 里的 dev 代理会用上
+
+歌单在 `src/lib/playlist.ts`，改 id 即可。**换歌后必须验**：
+
+```bash
+curl -s -o /dev/null -D - -r 0-0 \
+  'https://你的域名/meting/api?server=netease&type=url&id=<新ID>' \
+  | grep -i 'content-type\|content-range'
+```
+
+要看到 `audio/mpeg`，且 `content-range` 总字节不能是 **481115**。这个数字是「30 秒试听」的固定长度——没有登录 cookie 的接口遇到 VIP 曲目只给这一段，播放器上看着正常，三十秒后自己停。
+
+不想架这一套：`FEATURE_BGM=false`，播放器整块不渲染。
+
+## 命令
+
+```bash
+npm run dev          # 开发，默认 4321
+npm run build        # 构建
+npm run preview      # 预览构建产物
+npm run check        # Astro / TypeScript 检查
+npm run config:check # 打印生效配置（密码打码）并检查缺项
+```
+
+## 目录
+
+```
+data/posts/       文章（Markdown + frontmatter）
+data/uploads/     后台传的图
+assets/           插画源图
+public/           静态资源（图、花瓣素材、ambient.js）
+src/components/   卡片、名片、播放器、抽签、统计等
+src/config/       site.ts（身份） + env.ts（环境）
+src/lib/          文章读取、时钟、歌单、访客统计
+src/pages/        页面与 API 路由
+src/styles/       global.css + 各组件样式
+```
+
+## 部署
+
+`output: 'server'`，Node standalone。构建后 `node dist/server/entry.mjs` 即可跑，前面挂 nginx 反代。`data/` 与 `dist/` 同级保留——文章和上传的图是运行时读的，不在构建产物里；发布新版本时别覆盖 `data/` 和 `.env`。
+
+## 许可
+
+[MIT](LICENSE)

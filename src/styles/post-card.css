@@ -194,6 +194,15 @@
   -webkit-backdrop-filter: blur(14px) saturate(120%);
   backdrop-filter: blur(14px) saturate(120%);
 }
+/* 有真实封面时，纸牌换成不透明的米白：半透明玻璃压在花哨插画上，
+   字和背景会糊成一片，反而比没有角标更难看。 */
+.journal-card__badge[data-on-photo] .journal-card__plaque {
+  background: linear-gradient(135deg, rgba(255, 253, 248, .97) 0%, rgba(253, 245, 236, .96) 58%, rgba(250, 238, 231, .96) 100%);
+  box-shadow:
+    inset 0 0 12px rgba(255, 214, 178, .35),
+    0 10px 24px -8px rgba(30, 14, 24, .55);
+}
+.journal-card__badge[data-on-photo] .journal-card__plaque::before { opacity: .5; }
 /* 纸纤维：横密纵疏两道极淡的线，远看是纸，近看有颗粒 */
 .journal-card__plaque::before {
   content: '';
