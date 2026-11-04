@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.astro/
+.env
+data/uploads/*
+!data/uploads/.gitkeep
+data/visits.json
+_archive/
+
+# 内部文档：含服务器地址、部署方式、开发过程记录，不进开源仓库
+HANDOFF.md
+HOME-PAGE-UPDATE.md
+SERVER-SETUP.md
+DEPLOY.md
+USABILITY-REVIEW.md
+ADMIN-REDESIGN-HANDOFF.md
+CARD-EXCERPT-NOTES.md
+COPY.md
+
+# 调试产物
+review-shots/
+.admin-backup/
+/*.png

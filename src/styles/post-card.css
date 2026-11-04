@@ -1,0 +1,347 @@
+.journal-card {
+  --card-accent: #4b7fba;
+  --card-tint: #edf5ff;
+  --cover-start: #e4f0fd;
+  --cover-end: #bed6f1;
+  --cover-ink: #4d7cb8;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--surface-radius, 16px);
+  box-shadow: var(--surface-shadow, 0 5px 20px #45689309);
+  border-color: var(--surface-border, var(--line));
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.journal-card[data-tone='pink'] {
+  --card-accent: #b9678a;
+  --card-tint: #fcf0f5;
+  --cover-start: #ffe9f2;
+  --cover-end: #efc3d7;
+  --cover-ink: #b3678a;
+}
+.journal-card[data-tone='violet'] {
+  --card-accent: #6f66ad;
+  --card-tint: #f2f0fd;
+  --cover-start: #ebe6ff;
+  --cover-end: #c6bbf1;
+  --cover-ink: #7565b4;
+}
+.journal-card[data-tone='amber'] {
+  --card-accent: #a1763c;
+  --card-tint: #fdf6e9;
+  --cover-start: #fbeacb;
+  --cover-end: #f1cb90;
+  --cover-ink: #a8763f;
+}
+.journal-card__link { display: flex; flex-direction: column; height: 100%; color: inherit; }
+.journal-card__link:focus-visible { outline: none; }
+.journal-card:has(.journal-card__link:focus-visible) { outline: 3px solid var(--blue); outline-offset: 4px; }
+.journal-card__cover { position: relative; flex: none; aspect-ratio: 16 / 9; overflow: hidden; background: var(--cover-start); }
+.journal-card__cover > img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .65s ease; }
+
+/* 无封面占位（2026-11-04 11:10 重做）
+   上一版是「渐变色块 + 居中圆角方块里放图标 + 光斑 + 椭圆轨道」，像加载失败。
+   这一版按印刷封面的排版关系来：底色是同一色相的两级渐变，光斑位置由 slug 算出来
+   （同分类两张卡不撞脸），右下角压一枚巨大的幽灵图标，左下角一行小字，
+   再套一圈发丝内框 —— 元素少、层级清、放大缩小都不糊。 */
+.journal-card__art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--cover-ink);
+  background:
+    radial-gradient(85% 75% at -4% 104%, color-mix(in srgb, var(--cover-ink) 16%, transparent), transparent 64%),
+    linear-gradient(var(--art-angle, 130deg), var(--cover-start), var(--cover-end));
+}
+/* 光斑：两层很淡的径向光，位置随文章变化。
+   第一版白得太狠（#ffffffa8 铺了大半张），整张封面直接漂白，现在收到 50% 左右 */
+.journal-card__art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(52% 46% at var(--art-gx, 22%) var(--art-gy, 12%), #ffffff94, transparent 68%),
+    radial-gradient(38% 34% at 96% 102%, #ffffff5c, transparent 70%);
+}
+/* 极细的网点，只在左下角有一点，纯为质感 */
+.journal-card__art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .13;
+  background-image: radial-gradient(#fff 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: linear-gradient(148deg, #000 0%, transparent 62%);
+}
+/* 巨大幽灵图标：压右下角、出血、低透明度，像盖在纸上的印章 */
+.journal-card__art-mark {
+  position: absolute;
+  right: -18px;
+  bottom: -20px;
+  display: block;
+  color: currentColor;
+  opacity: .26;
+  transform: rotate(-8deg);
+  transition: transform .6s cubic-bezier(.22, .61, .36, 1), opacity .4s ease;
+}
+.journal-card__art-mark svg { display: block; stroke-width: 1.1; }
+/* 发丝内框：把色块收成一张「印刷品」 */
+.journal-card__art-frame {
+  position: absolute;
+  inset: 10px;
+  border: 1px solid #ffffffa6;
+  border-radius: 9px;
+  pointer-events: none;
+}
+/* 左下角：细线 + 分类名（当封面标题用，字号给足）+ 一行签名。
+   无封面 ≠ 没内容，让色块有个文字锚点，比纯渐变耐看。 */
+.journal-card__art-label {
+  position: absolute;
+  left: 22px;
+  bottom: 32px;
+  padding-top: 9px;
+  border-top: 1px solid currentColor;
+  font-size: 18px;
+  font-weight: 600;
+  /* 竖排 + flex：flex 主轴跟着 inline 方向走，justify-content: center 就是沿竖直方向居中，
+     字才不会挤在牌子上半截、底下空一块。 */
+  display: flex;
+  justify-content: center;
+  letter-spacing: .34em;
+  line-height: 1;
+  opacity: .95;
+}
+.journal-card__art-sign {
+  position: absolute;
+  left: 22px;
+  bottom: 14px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  opacity: .58;
+  line-height: 1;
+}
+/* 反光：hover 时一条窄亮带从左扫到右（跟时间名片同一种做法，别用整层白纱） */
+.journal-card__art-sheen {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 34%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(100deg,
+    transparent 0%,
+    #ffffff66 26%,
+    #ffffffb8 47%,
+    #ffffff40 66%,
+    transparent 100%);
+  transform: translateX(-80%) rotate(5deg);
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: transform 1.05s cubic-bezier(.3, .55, .3, 1), opacity .35s ease;
+}
+/* 文章卡角标 —— 挂在卡片左上角的一枚御守（2026-11-04 12:35 定稿）
+   樱花珐琅扣 + 竖排纸牌 + 梅结细流苏，全是矢量。
+   牌边不做霓虹灯带（太科技），改复古的「烫金压边 + 烛光呼吸」。
+   卡片是 overflow: hidden，只能从封面顶边往下挂，不能探出卡外。 */
+.journal-card__badge {
+  position: absolute;
+  z-index: 3;
+  top: 4px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  pointer-events: none;
+}
+.journal-card__clasp {
+  position: relative;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  margin-bottom: -9px;
+  filter: drop-shadow(0 3px 5px rgba(40, 10, 25, .35)) drop-shadow(0 0 8px rgba(244, 114, 182, .38));
+}
+.journal-card__plaque {
+  position: relative;
+  display: block;
+  min-height: 84px;
+  padding: 12px 10px;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 13px;
+  font-weight: 700;
+  /* 字距改回正的：原来 -.1em/.92 是为了收紧「V1.0.0」的英文串，换成中文四个字后
+     会挤成一坨，中文竖排本身就需要比英文更松的呼吸。 */
+  /* 竖排 + flex：flex 主轴跟着 inline 方向走，justify-content: center 就是沿竖直方向居中，
+     字才不会挤在牌子上半截、底下空一块。 */
+  display: flex;
+  justify-content: center;
+  letter-spacing: .34em;
+  line-height: 1;
+  color: #7a3f57;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+  background: linear-gradient(135deg, rgba(255, 246, 250, .74) 0%, rgba(251, 207, 232, .46) 58%, rgba(244, 114, 182, .28) 100%);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 12px rgba(255, 214, 178, .45),
+    0 12px 26px -8px rgba(70, 30, 55, .45);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+/* 纸纤维：横密纵疏两道极淡的线，远看是纸，近看有颗粒 */
+.journal-card__plaque::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(120, 80, 60, .07) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .18) 0 1px, transparent 1px 5px);
+  mix-blend-mode: soft-light;
+  opacity: .8;
+  pointer-events: none;
+}
+/* 版本号里的分隔点：竖排时它本来要占一整格，把 V1.0.0 拉成一串散字。
+   缩到半个字宽、再收一点字距，点就成了一个居中的小点，节奏重新连起来。 */
+.journal-card__dot {
+  font-size: .6em;
+  letter-spacing: -.02em;
+  opacity: .9;
+}
+/* 烫金压边 + 烛光呼吸：金线是静的，光是慢的 */
+.journal-card__plaque::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 3px;
+  border: 1px solid rgba(198, 158, 96, .92);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 238, 198, .6),
+    0 0 9px rgba(255, 198, 126, .45),
+    0 0 20px rgba(255, 168, 96, .24);
+  animation: plaque-candle 4.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes plaque-candle {
+  from { opacity: .58; }
+  to { opacity: 1; }
+}
+/* 梅结 + 细流苏：贴着牌底，中间不留缝 */
+.journal-card__tassel {
+  display: block;
+  margin-top: -2px;
+  transform-origin: top center;
+  filter: drop-shadow(0 3px 4px rgba(70, 25, 25, .35));
+}
+.journal-card__tassel svg {
+  display: block;
+  width: 23px;
+  height: 48px;
+}
+/* 摆动：默认挂上动画但暂停，只有「正在滚动」或 hover 时才跑。
+   用 play-state 而不是加/删 animation —— 后者每滚一下就重启，角标会跳回 0 度。 */
+.journal-card__badge { animation: badge-sway 3.5s ease-in-out infinite alternate; animation-play-state: paused; }
+.journal-card__tassel { animation: tassel-swing 3.5s ease-in-out infinite alternate-reverse; animation-play-state: paused; }
+.is-scrolling .journal-card__badge,
+.is-scrolling .journal-card__tassel { animation-play-state: running; }
+@media (hover: hover) and (pointer: fine) {
+  .journal-card:hover .journal-card__badge,
+  .journal-card:hover .journal-card__tassel { animation-play-state: running; }
+}
+@keyframes badge-sway {
+  0% { transform: rotate(-2.5deg); }
+  100% { transform: rotate(2.5deg); }
+}
+@keyframes tassel-swing {
+  0% { transform: rotate(-4deg); }
+  100% { transform: rotate(4deg); }
+}
+:root[data-theme='dark'] .journal-card__plaque::before { display: none; }
+:root[data-theme='dark'] .journal-card__plaque {
+  color: #f6dbe8;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .6);
+  background: linear-gradient(135deg, rgba(251, 207, 232, .22) 0%, rgba(244, 114, 182, .12) 100%);
+  box-shadow:
+    inset 0 0 12px rgba(255, 200, 150, .22),
+    0 12px 26px -8px rgba(0, 0, 0, .55);
+}
+:root[data-theme='dark'] .journal-card__plaque::after {
+  border-color: rgba(214, 176, 112, .75);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 236, 196, .18),
+    0 0 9px rgba(255, 190, 120, .3),
+    0 0 20px rgba(255, 160, 90, .16);
+}
+@media (max-width: 600px) {
+  .journal-card__badge { top: 3px; left: 12px; }
+  .journal-card__clasp { width: 21px; height: 21px; margin-bottom: -8px; }
+  .journal-card__plaque { min-height: 76px; font-size: 12px; letter-spacing: .28em; padding: 10px 8px; }
+  .journal-card__tassel svg { width: 20px; height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journal-card:hover .journal-card__badge,
+  .journal-card:hover .journal-card__tassel,
+  .journal-card__plaque::after { animation: none; }
+}
+.journal-card__copy { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 20px 20px 16px; }
+.journal-card__taxonomy { display: flex; align-items: center; gap: 8px; min-width: 0; height: 25px; font-size: 11px; }
+.journal-card__category { display: inline-flex; align-items: center; gap: 5px; flex: 0 1 auto; min-width: 0; max-width: 48%; padding: 4px 8px; color: var(--card-accent); background: var(--card-tint); border-radius: 6px; font-weight: 600; }
+.journal-card__category > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journal-card__category svg { flex: none; }
+.journal-card__tag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.journal-card__more { flex: none; color: var(--muted); font-size: 10px; }
+.journal-card__title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-height: 3.1em; margin: 0; font-size: 18px; font-weight: 600; line-height: 1.55; color: var(--ink); transition: color .2s ease; }
+.journal-card__excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-height: 3.6em; margin: 0 0 4px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.journal-card__meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+.journal-card__details { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; }
+.journal-card__meta time { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.journal-card__word-count { white-space: nowrap; }
+.journal-card__reading-time { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.journal-card__read { display: inline-flex; align-items: center; gap: 5px; color: var(--blue); font-weight: 600; }
+.journal-card__read svg { transition: transform .25s ease; }
+.journal-card:active { transform: translateY(-1px); }
+:root[data-theme='dark'] .journal-card { --card-accent: #a8caff; --card-tint: #30435f; --cover-start: #2b4166; --cover-end: #374f75; --cover-ink: #aec9ee; box-shadow: var(--surface-shadow, 0 5px 22px #0b15241f); }
+:root[data-theme='dark'] .journal-card[data-tone='pink'] { --card-accent: #efbad0; --card-tint: #4a3548; --cover-start: #443348; --cover-end: #63475c; --cover-ink: #e1b3cb; }
+:root[data-theme='dark'] .journal-card[data-tone='violet'] { --card-accent: #bfb4f2; --card-tint: #3b3454; --cover-start: #352e50; --cover-end: #4b4071; --cover-ink: #cbc2f0; }
+:root[data-theme='dark'] .journal-card[data-tone='amber'] { --card-accent: #e9c78f; --card-tint: #453827; --cover-start: #443620; --cover-end: #644e2e; --cover-ink: #e5c99c; }
+:root[data-theme='dark'] .journal-card__art::before {
+  background:
+    radial-gradient(72% 62% at var(--art-gx, 22%) var(--art-gy, 12%), #ffffff1a, transparent 62%),
+    radial-gradient(60% 55% at 92% 96%, #ffffff12, transparent 66%);
+}
+:root[data-theme='dark'] .journal-card__art::after { opacity: .08; }
+:root[data-theme='dark'] .journal-card__art-mark { opacity: .38; }
+:root[data-theme='dark'] .journal-card__art-frame { border-color: #ffffff2e; }
+:root[data-theme='dark'] .journal-card__art-sheen {
+  background: linear-gradient(100deg, transparent 0%, #ffffff26 26%, #ffffff45 47%, #ffffff14 66%, transparent 100%);
+}
+:root[data-theme='dark'] .journal-card__badge { color: #e9d7e6; }
+@media (hover: hover) and (pointer: fine) {
+  .journal-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px #4568931c; border-color: var(--card-accent); }
+  .journal-card:hover .journal-card__cover > img { transform: scale(1.03); }
+  .journal-card:hover .journal-card__art-mark { transform: rotate(-8deg) translate(-4px, -4px); opacity: .22; }
+  .journal-card:hover .journal-card__art-sheen { opacity: 1; transform: translateX(320%) rotate(5deg); }
+  .journal-card:hover .journal-card__title { color: var(--blue); }
+  .journal-card:hover .journal-card__read svg { transform: translate(2px, -2px); }
+}
+@media (max-width: 600px) {
+  .journal-card__copy { padding: 17px 16px 15px; gap: 10px; }
+  .journal-card__taxonomy { gap: 6px; }
+  .journal-card__title { font-size: 17px; }
+  .journal-card__badge { left: 12px; top: 12px; }
+  .journal-card__art-label { left: 18px; bottom: 28px; font-size: 16px; }
+  .journal-card__art-sign { left: 18px; bottom: 12px; }
+  /* 手机卡片窄，168/140 的图标会显得过大，缩一档 */
+  .journal-card__art-mark svg { width: 108px; height: 108px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journal-card, .journal-card__cover > img, .journal-card__art-mark, .journal-card__art-sheen, .journal-card__title, .journal-card__read svg { transition: none; }
+  .journal-card:hover, .journal-card:active, .journal-card:hover .journal-card__cover > img, .journal-card:hover .journal-card__art-mark, .journal-card:hover .journal-card__read svg { transform: none; }
+  .journal-card:hover .journal-card__art-sheen { opacity: 0; transform: translateX(-80%) rotate(5deg); }
+}

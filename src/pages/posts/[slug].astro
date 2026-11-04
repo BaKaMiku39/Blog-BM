@@ -1,0 +1,50 @@
+---
+import Base from '../../layouts/Base.astro';
+import ArticleReader from '../../components/ArticleReader.astro';
+import { getPost, getPosts } from '../../lib/posts';
+import { getArticleNavigation } from '../../lib/article-navigation';
+import { getExcerpt } from '../../lib/excerpt';
+import { absoluteUrl, siteOrigin } from '../../lib/site';
+import { isAdmin } from '../../lib/auth';
+import { config } from '../../config';
+const admin = isAdmin(Astro);
+const post = await getPost(Astro.params.slug || '', admin);
+if (!post) return Astro.redirect('/404');
+const isDraft = post.draft;
+const allPosts = await getPosts();
+const navigation = getArticleNavigation(post, allPosts);
+const categories = [...new Set(allPosts.map(item => item.category))];
+const description = post.description.trim() || getExcerpt(post.body);
+const origin = siteOrigin(Astro.request, Astro.url);
+const pageUrl = absoluteUrl(Astro.url.pathname, origin);
+const coverUrl = absoluteUrl(post.cover || config.site.ogImage, origin);
+const published = post.publishedAt || post.date;
+const modified = post.updatedAt || published;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.title,
+  description,
+  datePublished: published,
+  dateModified: modified,
+  url: pageUrl,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+  image: [coverUrl],
+  articleSection: post.category,
+  keywords: post.tags.join(', '),
+  inLanguage: config.site.locale,
+  author: { '@type': 'Person', name: config.site.author.name, url: absoluteUrl('/about', origin) },
+  publisher: { '@type': 'Organization', name: config.site.name, logo: { '@type': 'ImageObject', url: absoluteUrl(config.site.author.avatar, origin) } },
+};
+---
+<Base
+  title={`${post.title}${isDraft ? '（草稿预览）' : ''}`}
+  description={description}
+  image={post.cover || undefined}
+  type={isDraft ? 'website' : 'article'}
+  publishedTime={isDraft ? undefined : published}
+  noindex={isDraft}
+>
+  {!isDraft && <script slot="head" type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd)}></script>}
+  <ArticleReader post={post} navigation={navigation} draft={isDraft} total={allPosts.length} categories={categories} />
+</Base>

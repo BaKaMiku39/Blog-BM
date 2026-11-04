@@ -1,0 +1,248 @@
+---
+import '../styles/global.css';
+import { ArrowUp, BookOpenText, House, Moon, Search, Sun, UserRound } from '@lucide/astro';
+import { absoluteUrl, siteOrigin } from '../lib/site';
+import FortuneDraw from '../components/FortuneDraw.astro';
+import BgmPlayer from '../components/BgmPlayer.astro';
+import { recordVisit, visitStats } from '../lib/visits';
+import { config } from '../config';
+
+const { site } = config;
+const {
+  title = site.name,
+  description = site.description,
+  image,
+  type = 'website',
+  publishedTime,
+  noindex = false,
+} = Astro.props;
+const path = Astro.url.pathname;
+const icp = config.env.site.icp;
+const moeIcp = config.env.site.moeIcp;
+const origin = siteOrigin(Astro.request, Astro.url);
+const canonical = absoluteUrl(Astro.url.pathname, origin);
+const socialImage = absoluteUrl(image || site.ogImage, origin);
+const fullTitle = `${title} · ${site.name}`;
+
+/** 顶栏导航的高亮规则：key → 当前路径是否算在这一栏 */
+const navActive = (key: string) =>
+  key === 'home' ? path === '/' :
+  key === 'articles' ? path === '/articles' || path.startsWith('/posts/') :
+  key === 'about' ? path === '/about' :
+  false;
+const navIcon = { home: House, articles: BookOpenText, about: UserRound } as const;
+
+// 访问统计：每个 SSR 页面记一次（后台与 API 不走这里）；nginx 需要传 X-Forwarded-For，否则按直连地址去重
+const ua = Astro.request.headers.get('user-agent') || '';
+const ip = Astro.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || Astro.clientAddress || '';
+if (config.env.features.visits && !path.startsWith('/admin')) recordVisit(ip, ua);
+const visits = visitStats();
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="alternate" type="application/rss+xml" title={site.name} href="/rss.xml" />
+    <title>{fullTitle}</title>
+
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+
+    <meta name="theme-color" content={site.themeColor.light} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={site.themeColor.dark} media="(prefers-color-scheme: dark)" />
+    <!-- 主题必须在首帧前落定。放 body 末尾时 SSR 会先画一帧浅色，暗色刷新必闪（见 USABILITY-REVIEW P0-4） -->
+    <script is:inline>
+      (() => {
+        let dark = matchMedia('(prefers-color-scheme: dark)').matches;
+        try {
+          const saved = localStorage.getItem('theme');
+          if (saved) dark = saved === 'dark';
+        } catch {}
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        // 刷新时浏览器也要「恢复滚动位置」，而它会尊重 CSS 的 scroll-behavior: smooth，
+        // 于是页面先停在顶部再一路滑下去 —— 看起来像回滚。首次真实交互前先关掉平滑。
+        const boot = document.documentElement;
+        boot.classList.add('is-booting');
+        const wake = () => {
+          boot.classList.remove('is-booting');
+          ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(name => removeEventListener(name, wake, true));
+        };
+        ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(name => addEventListener(name, wake, true));
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+  <body class:list={[{ 'home-page': path === '/' }]}>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <canvas class="ambient-canvas" aria-hidden="true"></canvas>
+    <div class="reading-progress" aria-hidden="true"></div>
+    <header class="site-header">
+      <div class="shell nav-inner">
+        <a class="brand" href="/" aria-label={`${site.name} 首页`}><span class="brand-mark"><img src={site.author.avatar} alt="" width="34" height="34" /></span><strong>{site.name}</strong><span class="brand-spark" aria-hidden="true">✦</span></a>
+        <nav class="main-nav" aria-label="主导航">
+          {site.nav.map(item => {
+            const Icon = navIcon[item.key];
+            return (
+              <a class:list={[{ active: navActive(item.key) }]} href={item.href}><Icon size={15} aria-hidden="true" />{item.label}</a>
+            );
+          })}
+        </nav>
+        <div class="nav-tools">{config.env.features.search && <form class="header-search" action="/articles" role="search"><Search size={16} aria-hidden="true" /><input type="search" name="q" placeholder="搜索文章..." aria-label="搜索文章" /></form>}
+        <button class="theme-toggle" type="button" aria-label="切换明暗主题" aria-pressed="false" title="切换明暗主题"><Moon class="moon-icon" size={18} aria-hidden="true" /><Sun class="sun-icon" size={18} aria-hidden="true" /></button></div>
+      </div>
+      <!-- 顶栏挂件：抽签签条，挂在顶栏下沿随其吸顶（≤820px 隐藏） -->
+      {config.env.features.fortune && <FortuneDraw />}
+    </header>
+    <!-- 播放器悬浮态的落点：放在顶栏之后，Tab 序才不用走完整个页面才轮到它。
+         元素本身 position:fixed，这个容器高度为 0，不参与布局。 -->
+    <div class="bgm-float-host" data-bgm-host></div>
+    <main id="main" tabindex="-1"><slot /></main>
+    <footer class="site-footer">
+      {config.env.features.visits && (
+      <div class="shell footer-stats" aria-label="访问统计">
+        <span>今日访客：<b>{visits.todayVisitors}</b></span><i aria-hidden="true">✦</i>
+        <span>今日访问：<b>{visits.todayViews}</b></span><i aria-hidden="true">✦</i>
+        <span>本站访客：<b>{visits.totalVisitors}</b></span><i aria-hidden="true">✦</i>
+        <span>本站访问：<b>{visits.totalViews}</b></span><i aria-hidden="true">✦</i>
+        <span>已运行：<b>{visits.runningDays} 天</b></span>
+      </div>
+      )}
+      <div class="shell footer-inner"><div class="footer-brand"><strong>{site.name}</strong><p>{site.tagline}</p></div><nav class="footer-nav" aria-label="页脚导航">{site.footerNav.map(item => <a href={item.href}>{item.label}</a>)}</nav><div class="footer-records"><span>{icp || site.records.icpPlaceholder}</span><span>{moeIcp || site.records.moePlaceholder}</span><small>© {new Date().getFullYear()} {site.name}</small></div></div>
+    </footer>
+    <button class="back-to-top" type="button" aria-label="回到顶部" title="回到顶部"><ArrowUp size={18} aria-hidden="true" /></button>
+    {config.env.features.bgm && <BgmPlayer />}
+    <script is:inline src="/ambient.js"></script>
+    <script is:inline>
+      const root = document.documentElement;
+      const systemDark = matchMedia('(prefers-color-scheme: dark)');
+      const applyTheme = dark => { root.dataset.theme = dark ? 'dark' : 'light'; };
+      const themeToggle = document.querySelector('.theme-toggle');
+      const syncToggle = () => themeToggle?.setAttribute('aria-pressed', String(root.dataset.theme === 'dark'));
+      syncToggle();
+      // 标签页彩蛋：切走卖个萌，回来说欢迎，几秒后换回原标题
+      const baseTitle = document.title;
+      let welcomeTimer;
+      document.addEventListener('visibilitychange', () => {
+        clearTimeout(welcomeTimer);
+        if (document.hidden) {
+          document.title = '(´･ω･`) 去哪了…';
+        } else {
+          document.title = '欢迎回来 (｡•̀ᴗ-)✧';
+          welcomeTimer = setTimeout(() => { document.title = baseTitle; }, 2400);
+        }
+      });
+      themeToggle?.addEventListener('click', event => {
+        const dark = root.dataset.theme !== 'dark';
+        const commit = () => {
+          applyTheme(dark);
+          localStorage.setItem('theme', dark ? 'dark' : 'light');
+          syncToggle();
+        };
+        if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          commit();
+          return;
+        }
+        // 从点击处扩散：新主题的圆形遮罩由 0 长到盖住整个视口
+        const x = event.clientX;
+        const y = event.clientY;
+        const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        const transition = document.startViewTransition(commit);
+        transition.ready.then(() => {
+          try {
+            root.animate(
+              { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+              { duration: 320, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' }
+            );
+          } catch {}
+        }).catch(() => {});
+      });
+      systemDark.addEventListener('change', event => {
+        if (!localStorage.getItem('theme')) { applyTheme(event.matches); syncToggle(); }
+      });
+      const backToTop = document.querySelector('.back-to-top');
+      if (backToTop) {
+        const syncBackToTop = () => {
+          const visible = window.scrollY > 700;
+          backToTop.classList.toggle('is-visible', visible);
+          // 透明态仍在 Tab 序列里，键盘会停在一个看不见的按钮上
+          backToTop.inert = !visible;
+        };
+        addEventListener('scroll', syncBackToTop, { passive: true });
+        backToTop.addEventListener('click', () => {
+          scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        });
+        syncBackToTop();
+      }
+      if (document.body.classList.contains('home-page')) {
+        const header = document.querySelector('.site-header');
+        const articles = document.querySelector('#articles');
+        const updateHeader = () => {
+          if (!header) return;
+          const scrollTop = window.scrollY;
+          const headerHeight = header.getBoundingClientRect().height;
+          const articlesTop = articles
+            ? articles.getBoundingClientRect().top + scrollTop
+            : Number.POSITIVE_INFINITY;
+          const inArticleArea = scrollTop >= articlesTop - headerHeight;
+          header.classList.toggle('is-scrolled', scrollTop > 32 && !inArticleArea);
+          header.classList.toggle('is-articles', inArticleArea);
+        };
+        addEventListener('scroll', updateHeader, { passive: true });
+        addEventListener('resize', updateHeader, { passive: true });
+        updateHeader();
+      }
+      if (document.querySelector('.article')) {
+        const updateProgress = () => {
+          const height = document.documentElement.scrollHeight - innerHeight;
+          document.querySelector('.reading-progress').style.transform = `scaleX(${height > 0 ? scrollY / height : 0})`;
+        };
+        addEventListener('scroll', updateProgress, { passive: true });
+        updateProgress();
+        document.querySelectorAll('.prose pre').forEach(pre => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'copy-code';
+          button.textContent = '复制';
+          button.setAttribute('aria-label', '复制代码');
+          button.addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(pre.querySelector('code')?.textContent || pre.textContent || ''); button.textContent = '已复制'; }
+            catch { button.textContent = '复制失败'; }
+            setTimeout(() => button.textContent = '复制', 1800);
+          });
+          pre.append(button);
+        });
+      }
+    </script>
+    <script>
+      import { initCelebrate } from '../scripts/celebrate';
+      initCelebrate();
+    </script>
+    <script>
+      // 御守角标：滚动时摆，停下 240ms 后再停（只切换 play-state，不重启动画，所以不会跳回 0 度）
+      (() => {
+        const root = document.documentElement;
+        let timer = 0;
+        addEventListener('scroll', () => {
+          root.classList.add('is-scrolling');
+          clearTimeout(timer);
+          timer = window.setTimeout(() => root.classList.remove('is-scrolling'), 240);
+        }, { passive: true });
+      })();
+    </script>
+  </body>
+</html>

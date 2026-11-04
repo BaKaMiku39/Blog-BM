@@ -1,0 +1,623 @@
+---
+import { playlist } from '../lib/playlist';
+// 每次打开页面随机挑一首开头（用户要求「刷新就换歌」）。
+// 站内翻页不换：那靠 sessionStorage 续播，只有重新加载整页才算新的一轮。
+const startIndex = Math.floor(Math.random() * playlist.length);
+const first = playlist[startIndex];
+---
+<div class="bgm" data-bgm data-bgm-start={startIndex}>
+  <img class="bgm__cover" data-bgm-cover src={first.pic} alt="" width="60" height="60" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+  <div class="bgm__main">
+    <p class="bgm__meta">
+      <span class="bgm__title" data-bgm-title>{first.title}</span>
+      <span class="bgm__artist" data-bgm-artist>{first.artist}</span>
+      <span class="bgm__lyric" data-bgm-lyric hidden></span>
+    </p>
+  </div>
+  <div class="bgm__scrub">
+    <span class="bgm__time" data-bgm-time>0:00</span>
+    <div class="bgm__track" data-bgm-track role="slider" tabindex="0" aria-label="播放进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="bgm__fill" data-bgm-progress></span>
+    </div>
+    <span class="bgm__time" data-bgm-total>0:00</span>
+  </div>
+  <!-- 一行搞定：上一首/播放/下一首 与 顺序/歌词/喇叭 并排同高，
+       工具按钮就是原来下面那一排平移到右侧，不再单独占一行 -->
+  <div class="bgm__bar">
+    <div class="bgm__controls">
+    <button class="bgm__btn" type="button" data-bgm-prev aria-label="上一首"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M6 5h2.2v14H6zm13 0v14l-9.6-7z" /></svg></button>
+    <button class="bgm__btn bgm__btn--play" type="button" data-bgm-play aria-label="播放" aria-pressed="false">
+      <svg class="bgm__icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 5.3v13.4L20 12z" /></svg>
+      <svg class="bgm__icon-pause" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7.4 4.8h3.3v14.4H7.4zm5.9 0h3.3v14.4h-3.3z" /></svg>
+    </button>
+    <button class="bgm__btn" type="button" data-bgm-next aria-label="下一首"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M18 5h-2.2v14H18zM5 5v14l9.6-7z" /></svg></button>
+    </div>
+    <span class="bgm__bar-sep" aria-hidden="true"></span>
+    <!-- 工具组：播放顺序 / 完整歌词 / 音量（音量收在喇叭的浮层里，不占行） -->
+    <div class="bgm__tools">
+    <button class="bgm__tool" type="button" data-bgm-order data-order="shuffle" aria-label="随机播放（点击切换）" aria-pressed="false" title="随机播放">
+      <svg class="bgm__ic-shuffle" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5" /><path d="M4 20 21 3" /><path d="M21 16v5h-5" /><path d="m15 15 6 6" /><path d="m4 4 5 5" /></svg>
+      <svg class="bgm__ic-repeat" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
+      <svg class="bgm__ic-single" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /><path d="M11.1 10.4 12.7 9.5v5" /></svg>
+    </button>
+    <button class="bgm__tool" type="button" data-bgm-lyrics-btn aria-label="查看完整歌词" aria-expanded="false" title="完整歌词">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M7 15h4M14 15h3M7 11h2M12 11h5" /></svg>
+    </button>
+    <div class="bgm__volwrap" data-bgm-volwrap>
+      <button class="bgm__mute" type="button" data-bgm-mute aria-label="静音" aria-pressed="false" aria-expanded="false">
+        <svg class="bgm__icon-vol" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" /><path d="M15.4 8.6a4.8 4.8 0 0 1 0 6.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /><path d="M17.9 6.1a8.3 8.3 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg>
+        <svg class="bgm__icon-muted" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z" /><path d="m15.6 9.4 4.4 5.2m0-5.2-4.4 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" /></svg>
+      </button>
+    </div>
+    </div>
+  </div>
+
+  <!-- 音量浮层：贴着卡片上沿弹出，不挤占播放器里的位置 -->
+  <div class="bgm__volpop" data-bgm-volpop>
+    <div class="bgm__volrail" data-bgm-vol role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70">
+      <span class="bgm__volfill" data-bgm-volfill></span>
+    </div>
+    <span class="bgm__volnum" data-bgm-volnum>70%</span>
+  </div>
+
+  <!-- 完整歌词：贴在卡片上的浮层，点歌词按钮展开；吸附在栏里时向下弹，浮在底部时向上弹 -->
+  <div class="bgm__lyrics" data-bgm-lyrics-panel aria-label="完整歌词">
+    <div class="bgm__lyrics-head">
+      <div class="bgm__lyrics-meta">
+        <span class="bgm__lyrics-eyebrow">完整歌词</span>
+        <span class="bgm__lyrics-title" data-bgm-lyrics-title>—</span>
+      </div>
+      <button class="bgm__lyrics-close" type="button" data-bgm-lyrics-close aria-label="收起歌词">收起</button>
+    </div>
+    <div class="bgm__lyrics-body" data-bgm-lyrics-body>
+      <p class="bgm__lyrics-empty">正在取歌词…</p>
+    </div>
+  </div>
+
+  <audio data-bgm-audio preload="none"></audio>
+  <script type="application/json" data-bgm-list set:html={JSON.stringify(playlist)} />
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-bgm]');
+
+  if (root) {
+    // 悬浮态的落脚点：Base 里顶栏之后留了一个空容器。
+    // 播放器原本渲染在 body 末尾，Tab 要等整页链接走完才轮到它；挪到前面就顺手了。
+    const floatHost = document.querySelector<HTMLElement>('[data-bgm-host]') || document.body;
+    if (root.parentElement !== floatHost) floatHost.appendChild(root);
+    const audio = root.querySelector<HTMLAudioElement>('[data-bgm-audio]')!;
+    const cover = root.querySelector<HTMLImageElement>('[data-bgm-cover]')!;
+    const playBtn = root.querySelector<HTMLButtonElement>('[data-bgm-play]')!;
+    const prevBtn = root.querySelector<HTMLButtonElement>('[data-bgm-prev]')!;
+    const nextBtn = root.querySelector<HTMLButtonElement>('[data-bgm-next]')!;
+    const muteBtn = root.querySelector<HTMLButtonElement>('[data-bgm-mute]')!;
+    const orderBtn = root.querySelector<HTMLButtonElement>('[data-bgm-order]')!;
+    const lyricsBtn = root.querySelector<HTMLButtonElement>('[data-bgm-lyrics-btn]')!;
+    const volEl = root.querySelector<HTMLElement>('[data-bgm-vol]')!;
+    const volFill = root.querySelector<HTMLElement>('[data-bgm-volfill]')!;
+    const volWrap = root.querySelector<HTMLElement>('[data-bgm-volwrap]')!;
+    const volPop = root.querySelector<HTMLElement>('[data-bgm-volpop]')!;
+    const volNum = root.querySelector<HTMLElement>('[data-bgm-volnum]')!;
+    const lyricsBody = root.querySelector<HTMLElement>('[data-bgm-lyrics-body]')!;
+    const lyricsTitle = root.querySelector<HTMLElement>('[data-bgm-lyrics-title]')!;
+    const lyricsClose = root.querySelector<HTMLButtonElement>('[data-bgm-lyrics-close]')!;
+    const titleEl = root.querySelector<HTMLElement>('[data-bgm-title]')!;
+    const artistEl = root.querySelector<HTMLElement>('[data-bgm-artist]')!;
+    const lyricEl = root.querySelector<HTMLElement>('[data-bgm-lyric]')!;
+    const timeEl = root.querySelector<HTMLElement>('[data-bgm-time]')!;
+    const totalEl = root.querySelector<HTMLElement>('[data-bgm-total]')!;
+    const fillEl = root.querySelector<HTMLElement>('[data-bgm-progress]')!;
+    const trackEl = root.querySelector<HTMLElement>('[data-bgm-track]')!;
+    const tracks = JSON.parse(root.querySelector('[data-bgm-list]')?.textContent || '[]');
+
+    const KEY = 'bgm-state';
+    // 服务端已经摇过一次，别在客户端再摇 —— 否则标题会先闪一下第一首
+    let index = Math.min(Math.max(Number(root.dataset.bgmStart) || 0, 0), tracks.length - 1);
+    let playing = false;
+    let dragging = false;
+    // 播放顺序：随机 / 顺序 / 单曲循环，每次进站都从随机开始（不记忆）
+    let order: 'shuffle' | 'in-order' | 'single' = 'shuffle';
+    // 音量：默认 0.7，独立记忆（静音状态不记，刷新后按上次音量播放）
+    const VOL_KEY = 'bgm-volume';
+    let volume = (() => {
+      const raw = localStorage.getItem(VOL_KEY);
+      // 注意：Number(null) === 0，没存过的时候必须走默认值，否则一进来就是静音
+      const saved = raw === null ? Number.NaN : Number(raw);
+      return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 0.7;
+    })();
+
+    const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
+    const clock = (s: number) => (Number.isFinite(s) && s > 0 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : '0:00');
+    const srcFor = (i: number) => `/meting/api?server=netease&type=url&id=${tracks[i].id}`;
+
+    const renderProgress = (ratio: number) => {
+      const safe = Math.min(Math.max(ratio || 0, 0), 1);
+      fillEl.style.transform = `scaleX(${safe})`;
+      trackEl.setAttribute('aria-valuenow', String(Math.round(safe * 100)));
+    };
+
+    const renderVolume = () => {
+      const shown = audio.muted ? 0 : volume;
+      volFill.style.transform = `scaleY(${shown})`;
+      volEl.setAttribute('aria-valuenow', String(Math.round(shown * 100)));
+      volNum.textContent = `${Math.round(shown * 100)}%`;
+      muteBtn.setAttribute('aria-pressed', String(audio.muted));
+      muteBtn.setAttribute('aria-label', audio.muted ? '取消静音' : '静音');
+    };
+
+    const ORDER_LABEL: Record<'shuffle' | 'in-order' | 'single', string> = {
+      shuffle: '随机播放',
+      'in-order': '顺序播放',
+      single: '单曲循环',
+    };
+    const applyOrder = () => {
+      orderBtn.dataset.order = order;
+      const label = ORDER_LABEL[order];
+      orderBtn.setAttribute('aria-label', `${label}（点击切换）`);
+      orderBtn.setAttribute('aria-pressed', String(order !== 'shuffle'));
+      orderBtn.title = label;
+    };
+
+    // 顺序模式走环，随机模式避开当前这首（歌太少时不至于原地打转）
+    const nextIndex = (step: number) => {
+      if (tracks.length < 2) return index;
+      if (order === 'in-order') return (index + step + tracks.length) % tracks.length;
+      let next = index;
+      while (next === index) next = Math.floor(Math.random() * tracks.length);
+      return next;
+    };
+
+    const paint = () => {
+      const track = tracks[index];
+      titleEl.textContent = track.title;
+      titleEl.title = track.title;
+      artistEl.textContent = track.artist;
+      if (cover.getAttribute('src') !== track.pic) cover.src = track.pic;
+      playing = !audio.paused;
+      root.classList.toggle('is-playing', playing);
+      playBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+      playBtn.setAttribute('aria-pressed', String(playing));
+      renderVolume();
+    };
+
+    const save = () => {
+      try {
+        sessionStorage.setItem(KEY, JSON.stringify({ index, time: Math.round(audio.currentTime || 0), playing }));
+      } catch {}
+    };
+
+    const start = async () => {
+      try { await audio.play(); } catch {}
+      paint();
+      save();
+    };
+
+    // ---- 歌词：Meting 的 lrc 接口，解析成时间轴，唱歌时把歌手行换成当前句 ----
+    type LyricLine = { t: number; text: string; tr?: string };
+    let lyricLines: LyricLine[] = [];
+    let lyricIndex = -1;
+    let lyricToken = 0;
+
+    // 网易云的 lrc 把翻译接在同一行末尾：`原文 (中文)` / `（中文）` / `〖中文〗`。
+    // 拆成主行 + 小字翻译；`(がお～！)` 这种不含中文的整句括号不拆。
+    const splitTranslation = (content: string) => {
+      // 贪婪匹配「最后一对」括号：`（はぁ～） (唉)` 要拆成主行 `（はぁ～）` + 翻译 `唉`
+      const match = content.match(/^(.*)[（(〖]\s*〖?([\s\S]*?)〗?\s*[）)〗]$/);
+      if (!match || !match[1].trim() || !/[\u3400-\u9fff]/.test(match[2])) return { text: content, tr: '' };
+      return { text: match[1].trim(), tr: match[2].trim() };
+    };
+
+    const parseLrc = (text: string): LyricLine[] => {
+      const lines: LyricLine[] = [];
+      for (const raw of text.split('\n')) {
+        const match = raw.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+        if (!match) continue;
+        const content = match[3].trim();
+        // 网易云对没歌词的歌会回一行占位，别把它当成歌词显示
+        if (!content || /^(暂无歌词|纯音乐|此歌曲为没有填词的纯音乐)/.test(content)) continue;
+        const { text: main, tr } = splitTranslation(content);
+        lines.push({ t: Number(match[1]) * 60 + Number(match[2]), text: main, tr: tr || undefined });
+      }
+      return lines.sort((a, b) => a.t - b.t);
+    };
+
+    const renderLyricsList = () => {
+      lyricsTitle.textContent = tracks[index]?.title || '—';
+      if (!lyricLines.length) {
+        lyricsBody.replaceChildren(Object.assign(document.createElement('p'), {
+          className: 'bgm__lyrics-empty',
+          textContent: '这首歌暂时没有歌词，换一首试试。',
+        }));
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      lyricLines.forEach((line, i) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'bgm__lyrics-line';
+        el.dataset.i = String(i);
+        const main = document.createElement('span');
+        main.className = 'bgm__lyrics-text';
+        main.textContent = line.text;
+        el.append(main);
+        // 翻译以小字挂在对应原文下面
+        if (line.tr) {
+          const tr = document.createElement('span');
+          tr.className = 'bgm__lyrics-tr';
+          tr.textContent = line.tr;
+          el.append(tr);
+        }
+        el.addEventListener('click', () => {
+          audio.currentTime = line.t;
+          syncLyric(true);
+        });
+        frag.append(el);
+      });
+      lyricsBody.replaceChildren(frag);
+      lyricsBody.scrollTop = 0;
+    };
+
+    const resetLyric = () => {
+      lyricLines = [];
+      lyricIndex = -1;
+      lyricEl.hidden = true;
+      artistEl.hidden = false;
+      renderLyricsList();
+    };
+
+    const loadLyric = async (id: string | number) => {
+      const token = ++lyricToken;
+      resetLyric();
+      try {
+        const response = await fetch(`/meting/api?server=netease&type=lrc&id=${id}`);
+        const text = await response.text();
+        const parsed = parseLrc(text);
+        if (token !== lyricToken) return;
+        lyricLines = parsed;
+        renderLyricsList();
+      } catch {}
+    };
+
+    const syncLyric = (force = false) => {
+      if (!lyricLines.length) return;
+      const now = audio.currentTime || 0;
+      let index = -1;
+      for (let i = 0; i < lyricLines.length; i++) {
+        if (lyricLines[i].t <= now) index = i;
+        else break;
+      }
+      if (index === lyricIndex && !force) return;
+      lyricIndex = index;
+      const line = index >= 0 ? lyricLines[index].text : '';
+      if (line) {
+        lyricEl.textContent = line;
+        lyricEl.hidden = false;
+        artistEl.hidden = true;
+      } else {
+        lyricEl.hidden = true;
+        artistEl.hidden = false;
+      }
+      // 歌词拉开时同步高亮，并把它滚到中间
+      if (isLyricsOpen()) {
+        const current = lyricsBody.querySelector<HTMLElement>(`.bgm__lyrics-line[data-i="${index}"]`);
+        lyricsBody.querySelectorAll('.bgm__lyrics-line.is-current').forEach(el => el.classList.remove('is-current'));
+        if (current) {
+          current.classList.add('is-current');
+          // 位置按 rect 算：行的 offsetParent 是整张卡片，不是滚动容器
+          const box = lyricsBody.getBoundingClientRect();
+          const row = current.getBoundingClientRect();
+          const top = lyricsBody.scrollTop + (row.top - box.top) - lyricsBody.clientHeight / 2 + row.height / 2;
+          lyricsBody.scrollTo({ top: Math.max(0, top), behavior: force ? 'smooth' : 'auto' });
+        }
+      }
+    };
+
+    const select = (i: number, autoplay = false) => {
+      index = (i + tracks.length) % tracks.length;
+      audio.src = srcFor(index);
+      audio.load();
+      renderProgress(0);
+      timeEl.textContent = '0:00';
+      totalEl.textContent = '0:00';
+      paint();
+      save();
+      void loadLyric(tracks[index].id);
+      if (autoplay) void start();
+    };
+
+    playBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        if (!audio.src) audio.src = srcFor(index);
+        markAutoplay(true);
+        void start();
+      } else {
+        audio.pause();
+        markAutoplay(false); // 用户主动暂停过，就别再自作主张开
+      }
+    });
+    prevBtn.addEventListener('click', () => select(nextIndex(-1), !audio.paused));
+    nextBtn.addEventListener('click', () => select(nextIndex(1), !audio.paused));
+
+    // ---- 播放顺序：随机 → 顺序 → 单曲循环（每次进站都从随机开始） ----
+    let orderFlash = 0;
+    orderBtn.addEventListener('click', () => {
+      order = order === 'shuffle' ? 'in-order' : order === 'in-order' ? 'single' : 'shuffle';
+      applyOrder();
+      // 点击瞬间粉一下，随后回到默认色（不要常驻点亮）
+      orderBtn.classList.remove('is-flash');
+      void orderBtn.offsetWidth; // 强制重排，连点也能重新触发
+      orderBtn.classList.add('is-flash');
+      clearTimeout(orderFlash);
+      orderFlash = window.setTimeout(() => orderBtn.classList.remove('is-flash'), 420);
+    });
+
+    // ---- 音量：收在喇叭的浮层里，竖直拖动 ----
+    const setVolume = (value: number) => {
+      volume = Math.min(Math.max(value, 0), 1);
+      audio.volume = volume;
+      if (volume > 0 && audio.muted) audio.muted = false;
+      if (volume === 0) audio.muted = true;
+      try { localStorage.setItem(VOL_KEY, String(volume)); } catch {}
+      renderVolume();
+    };
+    const volumeAt = (clientY: number) => {
+      const rect = volEl.getBoundingClientRect();
+      if (!rect.height) return; // 浮层收起时 rect 为 0，别把手滑当成 0 音量
+      setVolume(1 - (clientY - rect.top) / rect.height);
+    };
+    let volDragging = false;
+    volEl.addEventListener('pointerdown', event => {
+      volDragging = true;
+      volEl.setPointerCapture(event.pointerId);
+      volumeAt(event.clientY);
+    });
+    volEl.addEventListener('pointermove', event => { if (volDragging) volumeAt(event.clientY); });
+    volEl.addEventListener('pointerup', event => {
+      volDragging = false;
+      try { volEl.releasePointerCapture(event.pointerId); } catch {}
+    });
+    volEl.addEventListener('keydown', event => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') { setVolume(volume + 0.05); event.preventDefault(); }
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') { setVolume(volume - 0.05); event.preventDefault(); }
+    });
+    const setVolOpen = (open: boolean) => {
+      volPop.classList.toggle('is-open', open);
+      muteBtn.setAttribute('aria-expanded', String(open));
+    };
+    muteBtn.addEventListener('click', () => {
+      // 触屏没有 hover，点一下先展开滑条；桌面端 hover 就能展开，点击留给静音
+      if (matchMedia('(hover: none)').matches) {
+        setVolOpen(!volPop.classList.contains('is-open'));
+        return;
+      }
+      audio.muted = !audio.muted;
+      paint();
+    });
+
+    // ---- 完整歌词：卡片第五行，点歌词按钮后音乐盒整体往下拉开 ----
+    const isLyricsOpen = () => root.classList.contains('is-lyrics-open');
+    const setLyricsOpen = (open: boolean) => {
+      root.classList.toggle('is-lyrics-open', open);
+      lyricsBtn.setAttribute('aria-expanded', String(open));
+      if (!open) return;
+      renderLyricsList();
+      // 等卡片拉开之后再滚到当前句，否则高度还是 0，scrollTop 不生效
+      window.setTimeout(() => syncLyric(true), 360);
+    };
+    lyricsBtn.addEventListener('click', () => setLyricsOpen(!isLyricsOpen()));
+    lyricsClose.addEventListener('click', () => setLyricsOpen(false));
+
+    // 点空白处 / Esc 收起浮层（点播放器本身不收起，免得点播放就没了）
+    document.addEventListener('pointerdown', event => {
+      const target = event.target as Node;
+      if (!volWrap.contains(target) && !volPop.contains(target)) setVolOpen(false);
+      if (isLyricsOpen() && !root.contains(target)) setLyricsOpen(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      setVolOpen(false);
+      if (isLyricsOpen()) setLyricsOpen(false);
+    });
+
+    const seekTo = (clientX: number) => {
+      const rect = trackEl.getBoundingClientRect();
+      const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        audio.currentTime = ratio * audio.duration;
+        timeEl.textContent = clock(ratio * audio.duration);
+      }
+      renderProgress(ratio);
+    };
+    trackEl.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      trackEl.setPointerCapture(event.pointerId);
+      seekTo(event.clientX);
+    });
+    trackEl.addEventListener('pointermove', (event) => { if (dragging) seekTo(event.clientX); });
+    trackEl.addEventListener('pointerup', (event) => {
+      dragging = false;
+      try { trackEl.releasePointerCapture(event.pointerId); } catch {}
+      save();
+    });
+    trackEl.addEventListener('keydown', (event) => {
+      if (!Number.isFinite(audio.duration)) return;
+      if (event.key === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - 5); event.preventDefault(); }
+      if (event.key === 'ArrowRight') { audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); event.preventDefault(); }
+    });
+
+    audio.addEventListener('loadedmetadata', () => { totalEl.textContent = clock(audio.duration); });
+    audio.addEventListener('timeupdate', () => {
+      if (dragging) return;
+      renderProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+      timeEl.textContent = clock(audio.currentTime);
+      syncLyric();
+    });
+    audio.addEventListener('play', paint);
+    audio.addEventListener('pause', () => { paint(); save(); });
+    audio.addEventListener('ended', () => {
+      // 单曲循环：原地重播，不切歌
+      if (order === 'single') {
+        audio.currentTime = 0;
+        void start();
+        return;
+      }
+      select(nextIndex(1), true);
+    });
+    audio.addEventListener('error', () => {
+      if (!audio.src) return;
+      root.classList.add('is-error');
+      titleEl.textContent = '这首暂时放不了';
+      artistEl.textContent = '换一首试试';
+    });
+
+    // 跨页面续播：整站是 MPA，跳转会重建 DOM，靠 sessionStorage 续上
+    // 刷新整页（F5 / 重新打开）不复用上一首，站内跳转才续播
+    const reloaded = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type === 'reload';
+    try {
+      const raw = sessionStorage.getItem(KEY);
+      if (raw && !reloaded) {
+        const state = JSON.parse(raw);
+        index = Math.min(Math.max(Number(state.index) || 0, 0), tracks.length - 1);
+        audio.preload = 'auto';
+        audio.src = srcFor(index);
+        audio.load();
+        if (state.time) {
+          audio.addEventListener('loadedmetadata', () => {
+            try { audio.currentTime = state.time; } catch {}
+            timeEl.textContent = clock(state.time);
+          }, { once: true });
+        }
+        if (state.playing) void start();
+      }
+    } catch {}
+
+    void loadLyric(tracks[index].id);
+
+    // ---- 自动播放 ----
+    // 浏览器只允许「用户与站点有过交互」之后自动播放带声音的音频。
+    // 所以：先直接试一次；被拒就挂一组一次性监听，用户第一次点/按键时接管。
+    // 用户主动按过暂停的话，记在 localStorage 里，以后不再自动开。
+    const markAutoplay = (on: boolean) => {
+      try { localStorage.setItem('bgm-autoplay', on ? 'on' : 'off'); } catch {}
+    };
+
+    const tryAutoplay = () => {
+      let pref = 'on';
+      try { pref = localStorage.getItem('bgm-autoplay') || 'on'; } catch {}
+      if (pref === 'off') return;
+
+      if (!audio.src) audio.src = srcFor(index);
+      void start();
+
+      const kick = () => {
+        cleanup();
+        if (!audio.paused) return;
+        try { if (localStorage.getItem('bgm-autoplay') === 'off') return; } catch {}
+        if (!audio.src) audio.src = srcFor(index);
+        void start();
+      };
+      const cleanup = () => {
+        ['pointerdown', 'keydown', 'touchend'].forEach(name => {
+          document.removeEventListener(name, kick, true);
+        });
+      };
+      ['pointerdown', 'keydown', 'touchend'].forEach(name => {
+        document.addEventListener(name, kick, true);
+      });
+    };
+
+    audio.volume = volume; // 背景音，默认 0.7，不炸耳朵；上次拖到哪就记到哪
+    applyOrder();
+    renderVolume();
+    tryAutoplay();
+
+
+    window.addEventListener('pagehide', save);
+
+    // 跟顶栏一致：首屏上几乎透明，滚过一段才变实心。
+    // 内页没有大图打底，所以一进来就是实心，否则白底上字看不清。
+    const hasHero = Boolean(document.querySelector('.hero-illustrated'));
+    const syncSurface = () => {
+      const solid = !hasHero || window.scrollY > 32;
+      root.classList.toggle('is-solid', solid);
+    };
+    window.addEventListener('scroll', syncSurface, { passive: true });
+    syncSurface();
+
+    // 吸附：首页侧栏在时间名片下面留了一个空位（[data-bgm-slot]）。
+    // 平时固定在右下角浮着，等那个空位滚到播放器所在的高度，就把它收进侧栏里；
+    // 往上滚回来自动弹出来。
+    const slot = document.querySelector<HTMLElement>('[data-bgm-slot]');
+    // 文章页的槽位是「钉住」的：进来就直接落在右栏里，不跟随滚动判断。
+    const pinned = slot?.dataset.bgmPin === 'true';
+    // 刷新时「恢复滚动位置」也会发 scroll 事件，那不是用户在滚。
+    // 只有用户真的动过（滚轮/触摸/按键/点击）之后，才播放飞进侧栏的 FLIP；
+    // 否则刷新会看到播放器从右下角横穿半个屏幕飞过去。
+    let userActive = false;
+    const wakeDock = () => { userActive = true; };
+    ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(name => {
+      addEventListener(name, wakeDock, { capture: true, passive: true, once: true });
+    });
+
+    // FLIP：先量当前位置 → 换布局 → 再量新位置 → 用 transform 补一段动画，
+    // 这样「飞进侧栏 / 弹回右下角」是滑过去的，不是硬切。
+    const morph = (mutate: () => void) => {
+      const first = root.getBoundingClientRect();
+      mutate();
+      const last = root.getBoundingClientRect();
+      if (!first.width || !last.width) return;
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      const sx = first.width / last.width;
+      const sy = first.height / last.height;
+      const still = Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < .01 && Math.abs(sy - 1) < .01;
+      if (still || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      root.animate(
+        [
+          { transformOrigin: 'top left', transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: .92 },
+          { transformOrigin: 'top left', transform: 'none', opacity: 1 }
+        ],
+        { duration: 360, easing: 'cubic-bezier(.22, .61, .36, 1)' }
+      );
+    };
+
+    const setDocked = (docked: boolean, animate = true) => {
+      if (!slot || docked === root.classList.contains('is-docked')) return;
+      const mutate = () => {
+        if (docked) {
+          slot.appendChild(root);
+          root.classList.add('is-docked');
+        } else {
+          floatHost.appendChild(root);
+          root.classList.remove('is-docked');
+        }
+      };
+      if (animate) morph(mutate); else mutate();
+    };
+
+    // 吸附：首页侧栏在时间名片下面留了一个空位（[data-bgm-slot]）。
+    // 平时固定在右下角浮着，等那个空位滚进视口、装得下播放器，就把它收进侧栏里；
+    // 往上滚回来自动弹出来。
+    const syncDock = () => {
+      if (!slot) return;
+      const first = !root.dataset.dockedBefore;
+      root.dataset.dockedBefore = '1';
+      // <1024 时槽位是 display:none，播放器必须留在右下角
+      const canDock = window.innerWidth >= 1024;
+      // 判据改成「槽位露出来一半以上」：之前写死 180（按 159 高的旧卡片调的），
+      // 卡片缩到 129 后这个值偏保守，槽位明明已经在屏幕上、播放器却还浮在它上面。
+      // 现在按播放器的实际高度算：槽位顶端高过「视口底 - 播放器高的一半」就归位。
+      const cardHeight = root.offsetHeight || 129;
+      const threshold = window.innerHeight - cardHeight * 0.55;
+      setDocked(canDock && (pinned || slot.getBoundingClientRect().top <= threshold), !first && userActive);
+    };
+    window.addEventListener('scroll', syncDock, { passive: true });
+    window.addEventListener('resize', syncDock);
+    syncDock();
+    // 落位之后再显示：JS 没跑到之前不画在错误的位置上
+    root.classList.add('is-ready');
+
+    paint();
+  }
+</script>

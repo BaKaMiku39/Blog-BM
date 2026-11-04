@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro';
+import ArticleReader from '../../components/ArticleReader.astro';
+import type { Post } from '../../lib/posts';
+
+if (!import.meta.env.DEV) return Astro.redirect('/404');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+const post: Post = {
+  slug: 'reading-preview', title: '樱花与雪，写在季节交界处',
+  description: '把喜欢的风景和日常，慢慢写进自己的小小博客。',
+  category: '生活随记', tags: ['春冬', '日常'], date: '2026-11-02', publishedAt: '',
+  cover: '', badge: '', draft: true,
+  body: `## 冬天还没走远
+
+清晨的空气还有一点凉，窗外的树枝却已经悄悄有了新的颜色。冬天和春天交接的时候，风景总是格外安静。
+
+![樱花与雪景中的小小日常](/images/hero-spring.webp)
+
+### 收藏一张喜欢的风景
+
+有时候，记录一天并不需要很多文字。一张图片、一段旋律，或者路上看到的光，都可以成为值得收藏的小事。
+
+> 愿每一个普通的日子，都有一点值得留住的温柔。
+
+## 把春天写进页面
+
+浅粉色留给樱花，淡蓝色留给天空。文字之间多留一点空隙，让阅读也跟着慢下来。
+
+### 留白与 **小细节**
+
+比起堆满装饰，更喜欢让内容自然地呼吸。标题清晰一些，段落短一些，图片也能更从容地展开。
+
+\`\`\`css
+.spring-note {
+  color: #3878c8;
+  border-color: #e6a8c9;
+}
+\`\`\`
+
+![熟悉的小头像](/images/avatar.webp)
+
+## 下一次，再接着记录
+
+写下来的东西不必每次都很完整。有了新的想法，就回来补上几句；看见喜欢的风景，就再留下一张照片。
+
+### 收藏一张喜欢的风景
+
+同样的标题，也可以记录不一样的心情。下一次回来看，希望还能想起今天的空气和阳光。
+
+${Array.from({ length: 5 }, () => '在季节交界处慢慢行走，听见风经过树梢，也把那些细碎的心情一同收藏。记录这些日常，是为了在很久以后，还能记得当时的喜欢。').join('\n\n')}`
+};
+---
+<Base title={post.title} description={post.description}><ArticleReader post={post} /></Base>

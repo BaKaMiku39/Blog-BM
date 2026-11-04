@@ -1,0 +1,177 @@
+---
+import Base from '../layouts/Base.astro';
+import PostCard from '../components/PostCard.astro';
+import DayCard from '../components/DayCard.astro';
+import QuoteCard from '../components/QuoteCard.astro';
+import WelcomeCard from '../components/WelcomeCard.astro';
+import SiteInfo from '../components/SiteInfo.astro';
+import SiteStatsCard from '../components/SiteStatsCard.astro';
+import { Mail, Sun, Moon, CloudSun, CloudMoon, CloudRain, CloudSnow } from '@lucide/astro';
+import { getCategories, getPosts, resolveCategory } from '../lib/posts';
+import { config } from '../config';
+const categories = await getCategories();
+const posts = await getPosts();
+const requestedCategory = Astro.url.searchParams.get('category') || '';
+const category = resolveCategory(requestedCategory) || requestedCategory;
+const tag = Astro.url.searchParams.get('tag') || '';
+const filteredPosts = posts.filter(post => (!category || post.category === category) && (!tag || post.tags.includes(tag)));
+const pageSize = config.env.misc.pageSize;
+const requestedPage = Number.parseInt(Astro.url.searchParams.get('page') || '1', 10);
+const pageCount = Math.max(1, Math.ceil(filteredPosts.length / pageSize));
+const currentPage = Number.isFinite(requestedPage) ? Math.min(Math.max(requestedPage, 1), pageCount) : 1;
+const visiblePosts = filteredPosts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+const visibleSlugs = new Set(visiblePosts.map(post => post.slug));
+const pageNumbers = Array.from({ length: Math.min(pageCount, 5) }, (_, index) => {
+  const firstPage = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+  return firstPage + index;
+});
+const homeHref = (nextPage: number) => {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (tag) params.set('tag', tag);
+  if (nextPage > 1) params.set('page', String(nextPage));
+  const query = params.toString();
+  return `/${query ? `?${query}` : ''}#articles`;
+};
+const latestPost = posts[0];
+const latestLabel = latestPost ? latestPost.date.replace(/-/g, '.') : '—';
+const github = config.env.social.github;
+const bilibili = config.env.social.bilibili;
+const email = config.env.social.email;
+---
+<Base title="首页">
+  <section class="hero hero-illustrated"><div class="hero-art" aria-hidden="true"><picture><source media="(max-width: 600px) and (orientation: portrait)" srcset="/images/hero-spring-portrait.webp" width="600" height="941" /><img src="/images/hero-spring.webp" alt="" width="1671" height="941" fetchpriority="high" /></picture></div><div class="shell hero-content"><span class="hero-kicker">{config.site.kicker}</span><h1>在这里，<br /><span class="hero-title-accent">记录热爱与思考。</span></h1><p class="hero-lede">欢迎来到 BaKaMiku 的个人博客。<br class="hero-copy-break" />写代码，也写喜欢的世界。</p><div class="hero-actions"><a class="primary-button" href="#articles">开始阅读 <span aria-hidden="true">→</span></a><a class="hero-ghost" href="/about">关于我 <span aria-hidden="true">↗</span></a></div><div class="hero-stats"><div class="hero-stat"><b>{posts.length}</b><span>篇文章</span></div><div class="hero-stat"><b>{categories.length}</b><span>个分类</span></div><div class="hero-stat"><b>{latestLabel}</b><span>最近更新</span></div></div></div><a class="hero-scroll" href="#articles" aria-label="向下阅读文章"><span>向下，发现更多</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></a></section>
+  <div id="articles" class="shell home-grid">
+    <aside class="profile-column" aria-label="博主介绍">
+      <section class="profile-panel"><div class="profile-banner" aria-hidden="true"><img class="profile-banner__img profile-banner__img--day" src="/images/banner-clear-day.webp" alt="" width="560" height="220" loading="lazy" decoding="async" /><img class="profile-banner__img profile-banner__img--night" src="/images/banner-clear-night.webp" alt="" width="560" height="220" loading="lazy" decoding="async" /><i class="deco-slot" data-deco-slot="profile" aria-hidden="true"></i></div><div class="profile-avatar"><img src="/images/avatar.webp" alt="BaKaMiku 的头像" width="76" height="76" /></div><h2>{config.site.author.name}<span class="profile-banner__badge" data-banner-badge aria-hidden="true"><Sun class="ic ic-clear-day" size={14} stroke-width={2.4} /><Moon class="ic ic-clear-night" size={14} stroke-width={2.4} /><CloudSun class="ic ic-cloud-day" size={14} stroke-width={2.4} /><CloudMoon class="ic ic-cloud-night" size={14} stroke-width={2.4} /><CloudRain class="ic ic-rain" size={14} stroke-width={2.4} /><CloudSnow class="ic ic-snow" size={14} stroke-width={2.4} /></span></h2><p>{config.site.author.role}</p><span>{config.site.author.motto}</span>
+        <div class="profile-socials" aria-label="社交与联系">
+          {github ? <a href={github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.76-.24.76-.54v-2.08c-3.1.68-3.76-1.32-3.76-1.32-.51-1.3-1.25-1.64-1.25-1.64-1.02-.7.08-.68.08-.68 1.13.08 1.72 1.16 1.72 1.16 1 .17 1.78.94 2.2 1.34.9.16 1.75.05 2.35-.13.09-.72.4-1.2.73-1.48-2.48-.28-5.08-1.24-5.08-5.53 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.42.11-2.95 0 0 .94-.3 3.08 1.14a10.7 10.7 0 0 1 5.6 0c2.13-1.44 3.07-1.14 3.07-1.14.62 1.53.23 2.67.12 2.95.71.78 1.14 1.78 1.14 3 0 4.3-2.6 5.24-5.08 5.52.41.35.77 1.03.77 2.08v3.09c0 .3.2.65.77.54A11.2 11.2 0 0 0 12 .8Z" /></svg></a> : <button disabled title="GitHub 链接待填写" aria-label="GitHub 链接待填写"><svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.76-.24.76-.54v-2.08c-3.1.68-3.76-1.32-3.76-1.32-.51-1.3-1.25-1.64-1.25-1.64-1.02-.7.08-.68.08-.68 1.13.08 1.72 1.16 1.72 1.16 1 .17 1.78.94 2.2 1.34.9.16 1.75.05 2.35-.13.09-.72.4-1.2.73-1.48-2.48-.28-5.08-1.24-5.08-5.53 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.42.11-2.95 0 0 .94-.3 3.08 1.14a10.7 10.7 0 0 1 5.6 0c2.13-1.44 3.07-1.14 3.07-1.14.62 1.53.23 2.67.12 2.95.71.78 1.14 1.78 1.14 3 0 4.3-2.6 5.24-5.08 5.52.41.35.77 1.03.77 2.08v3.09c0 .3.2.65.77.54A11.2 11.2 0 0 0 12 .8Z" /></svg></button>}
+          {bilibili ? <a href={bilibili} target="_blank" rel="noopener noreferrer" aria-label="Bilibili" title="Bilibili"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 3 2 3m6-3-2 3M6.5 7h11A3.5 3.5 0 0 1 21 10.5v7a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 17.5v-7A3.5 3.5 0 0 1 6.5 7Z"/><path d="M9 13v2m6-2v2"/></svg></a> : <button disabled title="Bilibili 链接待填写" aria-label="Bilibili 链接待填写"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 3 2 3m6-3-2 3M6.5 7h11A3.5 3.5 0 0 1 21 10.5v7a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 17.5v-7A3.5 3.5 0 0 1 6.5 7Z"/><path d="M9 13v2m6-2v2"/></svg></button>}
+          {email ? <a href={`mailto:${email}`} aria-label="发送邮件" title="发送邮件"><Mail size={18} /></a> : <button disabled title="邮箱待填写" aria-label="邮箱待填写"><Mail size={18} /></button>}
+        </div>
+      </section>
+      <WelcomeCard />
+      <QuoteCard />
+    </aside>
+    <div class="main-column">
+      <nav class="home-filters" aria-label="筛选文章">
+        <a class:list={[{ active: !category && !tag }]} aria-current={!category && !tag ? 'page' : undefined} data-category="" href="/#articles">全部 <span>{posts.length}</span></a>
+        {categories.map(item => <a class:list={[{ active: category === item }]} aria-current={category === item ? 'page' : undefined} data-category={item} href={`/?category=${encodeURIComponent(item)}#articles`}>{item} <span>{posts.filter(post => post.category === item).length}</span></a>)}
+      </nav>
+      <div class="post-grid home-post-grid" data-page-size={pageSize}>{posts.map(post => <PostCard post={post} hidden={!visibleSlugs.has(post.slug)} />)}</div>
+      <div class="empty-state" data-home-empty hidden={filteredPosts.length > 0}>还没有符合条件的文章。<a href="/#articles">查看全部文章</a></div>
+      <nav class="home-pagination" aria-label="文章分页" data-home-pagination hidden={filteredPosts.length <= pageSize}>
+        <a href={homeHref(Math.max(1, currentPage - 1))} data-page-step="-1" aria-label="上一页" aria-disabled={currentPage <= 1}>上一页</a>
+        <div class="home-pagination__pages">{pageNumbers.map(number => <a href={homeHref(number)} data-page={number} aria-label={`第 ${number} 页`} aria-current={number === currentPage ? 'page' : undefined} class:list={[{ active: number === currentPage }]}>{number}</a>)}</div>
+        <span class="home-pagination__summary">第 <b data-page-current>{currentPage}</b> / <span data-page-count>{pageCount}</span> 页</span>
+        <a href={homeHref(Math.min(pageCount, currentPage + 1))} data-page-step="1" aria-label="下一页" aria-disabled={currentPage >= pageCount}>下一页</a>
+      </nav>
+    </div>
+    <aside class="sidebar">
+      <DayCard />
+      {config.env.features.bgm && <div class="bgm-slot" data-bgm-slot></div>}
+      <SiteStatsCard />
+      <SiteInfo />
+    </aside>
+  </div>
+</Base>
+
+<script>
+  // 横幅切换：昼夜跟随右上角主题按钮（data-theme），天气四选一（晴/云/雨/雪），接天气接口时改 BANNER_WEATHER 即可
+  const BANNER_WEATHER = 'clear';
+  const bannerBadge = document.querySelector<HTMLElement>('[data-banner-badge]');
+  if (bannerBadge) bannerBadge.dataset.weather = BANNER_WEATHER;
+  const bannerDay = document.querySelector<HTMLImageElement>('.profile-banner__img--day');
+  const bannerNight = document.querySelector<HTMLImageElement>('.profile-banner__img--night');
+  if (bannerDay && bannerNight) {
+    bannerDay.src = `/images/banner-${BANNER_WEATHER}-day.webp`;
+    bannerNight.src = `/images/banner-${BANNER_WEATHER}-night.webp`;
+  }
+
+  const cardGrid = document.querySelector<HTMLElement>('.home-post-grid');
+  const filterNav = document.querySelector<HTMLElement>('.home-filters');
+  const pagination = document.querySelector<HTMLElement>('[data-home-pagination]');
+  const emptyState = document.querySelector<HTMLElement>('[data-home-empty]');
+  const countLabel = document.querySelector<HTMLElement>('[data-home-count]');
+  const titleLabel = document.querySelector<HTMLElement>('[data-home-title]');
+
+  if (cardGrid && filterNav && pagination && emptyState) {
+    const cards = Array.from(cardGrid.querySelectorAll<HTMLElement>('.journal-card'));
+    const pageSize = Number(cardGrid.dataset.pageSize) || 12;
+    let selectedCategory = new URL(location.href).searchParams.get('category') || '';
+    let selectedTag = new URL(location.href).searchParams.get('tag') || '';
+    let currentPage = Number.parseInt(new URL(location.href).searchParams.get('page') || '1', 10) || 1;
+
+    const buildHref = (page: number) => {
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set('category', selectedCategory);
+      if (selectedTag) params.set('tag', selectedTag);
+      if (page > 1) params.set('page', String(page));
+      return `/${params.size ? `?${params}` : ''}#articles`;
+    };
+
+    const updatePagination = (pageCount: number) => {
+      const firstPage = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+      const pageLinks = Array.from({ length: Math.min(pageCount, 5) }, (_, index) => {
+        const page = firstPage + index;
+        return `<a href="${buildHref(page)}" data-page="${page}" aria-label="第 ${page} 页"${page === currentPage ? ' aria-current="page" class="active"' : ''}>${page}</a>`;
+      }).join('');
+      pagination.innerHTML = `<a href="${buildHref(Math.max(1, currentPage - 1))}" data-page-step="-1" aria-label="上一页" aria-disabled="${currentPage <= 1}">上一页</a><div class="home-pagination__pages">${pageLinks}</div><span class="home-pagination__summary">第 <b data-page-current>${currentPage}</b> / <span data-page-count>${pageCount}</span> 页</span><a href="${buildHref(Math.min(pageCount, currentPage + 1))}" data-page-step="1" aria-label="下一页" aria-disabled="${currentPage >= pageCount}">下一页</a>`;
+      pagination.hidden = pageCount <= 1;
+    };
+
+    const render = () => {
+      const matchedCards = cards.filter(card =>
+        (!selectedCategory || card.dataset.category === selectedCategory) &&
+        (!selectedTag || (card.dataset.tags || '').split('|').includes(selectedTag))
+      );
+      const pageCount = Math.max(1, Math.ceil(matchedCards.length / pageSize));
+      currentPage = Math.min(Math.max(currentPage, 1), pageCount);
+      const firstVisible = (currentPage - 1) * pageSize;
+      const visibleCards = new Set(matchedCards.slice(firstVisible, firstVisible + pageSize));
+      cards.forEach(card => { card.hidden = !visibleCards.has(card); });
+      emptyState.hidden = matchedCards.length > 0;
+      if (countLabel) countLabel.textContent = `${matchedCards.length} 篇${selectedTag ? ` · #${selectedTag}` : ''}`;
+      if (titleLabel) titleLabel.textContent = selectedCategory || '最新文章';
+      filterNav.querySelectorAll<HTMLAnchorElement>('[data-category]').forEach(link => {
+        const active = link.dataset.category === selectedCategory && !selectedTag;
+        link.classList.toggle('active', active);
+        if (active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+      updatePagination(pageCount);
+    };
+
+    filterNav.addEventListener('click', event => {
+      const link = (event.target as Element).closest<HTMLAnchorElement>('a[data-category]');
+      if (!link) return;
+      event.preventDefault();
+      selectedCategory = link.dataset.category || '';
+      selectedTag = '';
+      currentPage = 1;
+      history.pushState({}, '', buildHref(currentPage));
+      render();
+    });
+
+    pagination.addEventListener('click', event => {
+      const link = (event.target as Element).closest<HTMLAnchorElement>('a');
+      if (!link || link.getAttribute('aria-disabled') === 'true') {
+        event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      currentPage = link.dataset.page ? Number(link.dataset.page) : currentPage + Number(link.dataset.pageStep || 0);
+      history.pushState({}, '', buildHref(currentPage));
+      render();
+      pagination.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    addEventListener('popstate', () => {
+      const params = new URL(location.href).searchParams;
+      selectedCategory = params.get('category') || '';
+      selectedTag = params.get('tag') || '';
+      currentPage = Number.parseInt(params.get('page') || '1', 10) || 1;
+      render();
+    });
+  }
+</script>

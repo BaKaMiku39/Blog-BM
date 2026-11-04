@@ -1,0 +1,36 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostCard from '../../components/PostCard.astro';
+import type { Post } from '../../lib/posts';
+
+if (!import.meta.env.DEV) return Astro.redirect('/404');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+
+const samples = [
+  { title: '把春天写进博客里', category: '动漫', tags: ['日常', '插画'], description: '樱花、雪景，还有想慢慢收藏的小美好。这里是我的一方小小天地。', body: '昨天路过樱花树，忽然想起还没把这里的春天记下来。于是选了一张很喜欢的插画，配上几句日常，留给以后慢慢回看。', cover: '/images/hero-spring.webp', badge: '生活手记' },
+  { title: '从零搭建自己的 Astro 博客', category: '技术笔记', tags: ['Astro', '前端', 'TypeScript', '学习笔记', '博客'], description: '记录从第一行代码到页面上线的过程，以及那些终于弄明白的小问题。', body: '这次重新整理了个人博客，从 Astro 项目结构开始，逐步接上 Markdown、页面路由和发布流程。过程中也记下容易忽略的配置，方便以后查阅。', cover: '', badge: '' },
+  { title: '一个慢慢长大的个人项目', category: '项目', tags: ['个人博客', '设计'], description: '给喜欢的想法一个落脚点，也把每一次微小的进步认真记录下来。', body: '最近开始一点点完善自己的小项目。先做好基本的页面和分类，再慢慢补上更细致的体验。', cover: '', badge: '持续更新' },
+  { title: '看完一部喜欢的番，想留下几句话', category: '动漫', tags: ['追番手记', '随想'], description: '总有一些故事，在片尾曲响起之后，还会陪着我们走很长一段路。', body: '最喜欢最后一集安静下来的那几分钟。故事虽然结束了，角色认真生活过的痕迹却还在，也提醒我把喜欢的瞬间好好记住。', cover: '', badge: '' },
+  { title: '那些让页面更舒服的小细节：间距、字体，以及恰到好处的留白', category: '技术笔记', tags: ['界面设计', 'CSS'], description: '', body: '## 从留白开始\n\n让 **标题** 更醒目，让 [内容](https://example.com) 更容易阅读。\n\n![示例图片](/images/avatar.webp)\n\n```css\n.card { padding: 20px; }\n```', cover: '', badge: '' },
+  { title: '今天也有认真记录生活', category: '生活随记', tags: ['随手记'], description: '用几行文字保存一个普通的下午。没有封面的时候，也有属于自己的小小风景。', body: '下课之后绕路买了一杯喜欢的饮料，回来的路上刚好赶上晚霞。把这样的普通日子认真记下来，过一阵子再翻出来看，也会觉得很开心。', cover: '', badge: '' }
+].map((sample, index): Post => ({ slug: `preview-${index}`, date: '2026-11-01', publishedAt: '2026-11-01T00:00:00+08:00', draft: true, ...sample }));
+---
+<Base title="文章卡片预览">
+  <div class="shell page-content card-preview">
+    <div class="page-intro">
+      <span class="eyebrow">A LITTLE POLISH</span>
+      <h1>文章卡片，换个新样子。</h1>
+      <p id="preview-note">这里用示例内容展示有图封面、默认封面和长标题效果，未发布任何示例文章。</p>
+      <a class="preview-back" href="/#articles">← 返回首页</a>
+    </div>
+    <div class="post-grid listing-grid">{samples.map(post => <PostCard post={post} preview />)}</div>
+  </div>
+</Base>
+
+<style>
+  .card-preview { padding-bottom: 72px; }
+  .card-preview .page-intro { margin-bottom: 28px; }
+  .card-preview .page-intro h1 { font-size: clamp(26px, 4vw, 36px); }
+  .card-preview .page-intro p { max-width: 640px; line-height: 1.9; }
+  .preview-back { display: inline-block; margin-top: 10px; color: var(--blue); font-size: 13px; }
+</style>

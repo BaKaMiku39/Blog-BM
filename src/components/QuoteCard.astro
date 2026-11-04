@@ -1,0 +1,11 @@
+---
+import { Quote } from '@lucide/astro';
+import { quoteOfTheDay } from '../lib/quotes';
+
+const quote = quoteOfTheDay();
+---
+<section class="widget-card quote-card" aria-label="今日一句">
+  <h2 class="widget-title"><Quote size={15} aria-hidden="true" />今日一句</h2>
+  <blockquote>「{quote.text}」</blockquote>
+  <p class="quote-from">—— {quote.from}</p>
+</section>

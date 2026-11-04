@@ -1,0 +1,109 @@
+---
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ListTree, X } from '@lucide/astro';
+import { renderArticle } from '../lib/article';
+import { getReadingTime, getWordCount } from '../lib/excerpt';
+import type { getArticleNavigation } from '../lib/article-navigation';
+import type { Post } from '../lib/posts';
+import WelcomeCard from './WelcomeCard.astro';
+import QuoteCard from './QuoteCard.astro';
+import { config } from '../config';
+import '../styles/article-reader.css';
+
+interface Props {
+  post: Post;
+  navigation?: ReturnType<typeof getArticleNavigation>;
+  draft?: boolean;
+  total?: number;
+  categories?: string[];
+}
+const { post, navigation, draft = false, total = 0, categories = [] } = Astro.props;
+const { html, headings } = renderArticle(post.body);
+const baseDepth = Math.min(...headings.map(heading => heading.depth));
+const updatedDate = post.updatedAt && Date.parse(post.updatedAt) > Date.parse(post.publishedAt || `${post.date}T00:00:00+08:00`)
+  ? new Date(post.updatedAt).toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' }) : '';
+const authorTags = categories.slice(0, 4);
+---
+<div class:list={['shell', 'article-layout', 'article-reader', { 'has-toc': headings.length > 0 }]} data-article-reader>
+  <div class="reading-progress" aria-hidden="true"><span data-reading-fill></span></div>
+  <article class="article reader-center">
+    <a class="back-link" href="/articles"><ArrowLeft size={14} aria-hidden="true" />返回文章列表</a>
+    <div class="reader-card">
+      {draft && <p class="draft-banner"><b>草稿预览</b>这篇尚未发布：只有登录后台时能看到，搜索引擎不会收录。</p>}
+      <header class="article-header">
+        <span class="eyebrow">{post.category}</span>
+        <h1>{post.title}</h1>
+        {post.description && <p>{post.description}</p>}
+        <div class="article-meta"><time datetime={post.date}>{post.date}</time><span>{getWordCount(post.body).toLocaleString('zh-CN')} 字</span><span>约 {getReadingTime(post.body)} 分钟阅读</span>{updatedDate && <span>更新于 <time datetime={post.updatedAt}>{updatedDate}</time></span>}</div>
+      </header>
+      <div class="reader-columns">
+        <div class="reader-body">
+          {post.cover && <div class="article-cover" aria-hidden="true"><img src={post.cover} alt="" /></div>}
+          <div class="prose" set:html={html} />
+          <footer class="article-footer"><div class="tag-list">{post.tags.map(tag => <a href={`/articles?q=${encodeURIComponent(tag)}`}>#{tag}</a>)}</div><a href="/articles">继续阅读 →</a></footer>
+        </div>
+      </div>
+    </div>
+    {navigation && (navigation.previous || navigation.next) &&
+      <nav class="article-neighbors" aria-label="相邻文章">
+        {navigation.previous ?
+          <a class="article-neighbor" href={`/posts/${navigation.previous.slug}`} rel="prev">
+            <span><ArrowLeft size={15} aria-hidden="true" />上一篇</span><strong>{navigation.previous.title}</strong>
+          </a> : <div class="article-neighbor-placeholder" aria-hidden="true"></div>}
+        {navigation.next &&
+          <a class="article-neighbor article-neighbor--next" href={`/posts/${navigation.next.slug}`} rel="next">
+            <span>下一篇<ArrowRight size={15} aria-hidden="true" /></span><strong>{navigation.next.title}</strong>
+          </a>}
+      </nav>}
+    {navigation && navigation.related.length > 0 &&
+      <section class="article-related" aria-labelledby="related-heading">
+        <h2 id="related-heading">相关文章</h2>
+        <ul>{navigation.related.map(item =>
+          <li><a href={`/posts/${item.slug}`}>
+            <span class="article-related__category">{item.category}</span>
+            <strong>{item.title}</strong>
+            <time datetime={item.date}>{item.date}</time>
+            <ArrowRight size={16} aria-hidden="true" />
+          </a></li>)}</ul>
+      </section>}
+  </article>
+
+  <aside class="reader-aside" aria-label="文章目录与背景音乐">
+    {headings.length > 0 && <div class="reader-toc">
+      <details open>
+        <summary><ListTree size={17} aria-hidden="true" /><span>文章目录</span><ChevronDown class="toc-chevron" size={16} aria-hidden="true" /></summary>
+        <nav aria-label="章节导航"><ol>{headings.map(heading => <li style={`--toc-depth: ${Math.min(heading.depth - baseDepth, 3)}`}><a href={`#${heading.id}`}>{heading.label}</a></li>)}</ol></nav>
+      </details>
+    </div>}
+    {config.env.features.bgm && <div class="bgm-slot" data-bgm-slot data-bgm-pin="true"></div>}
+  </aside>
+
+  <aside class="reader-author" aria-label="作者">
+    <div class="author-card">
+      <div class="author-banner" aria-hidden="true"><img src="/images/hero-spring-portrait.webp" alt="" width="600" height="941" loading="lazy" decoding="async" /></div>
+      <img class="author-avatar" src={config.site.author.avatar} alt={`${config.site.author.name} 的头像`} width="60" height="60" />
+      <h2>{config.site.author.name}</h2>
+      <p>{config.site.author.role}</p>
+      <div class="author-stats">
+        <div><b>{total}</b><span>篇文章</span></div>
+        <div><b>{categories.length || 4}</b><span>个分类</span></div>
+      </div>
+      {authorTags.length > 0 && <div class="author-tags">{authorTags.map(category => <a href={`/articles?category=${encodeURIComponent(category)}`}>{category}</a>)}</div>}
+    </div>
+    <WelcomeCard />
+    <QuoteCard />
+  </aside>
+
+  <dialog class="image-viewer" aria-label="图片查看器">
+    <div class="viewer-toolbar"><span class="viewer-count" aria-live="polite"></span><button class="viewer-close" type="button" aria-label="关闭图片" title="关闭图片" autofocus><X size={22} aria-hidden="true" /></button></div>
+    <div class="viewer-stage">
+      <button class="viewer-prev" type="button" aria-label="上一张图片" title="上一张图片"><ChevronLeft size={26} aria-hidden="true" /></button>
+      <img class="viewer-image" alt="" />
+      <p class="viewer-status" role="status" hidden></p>
+      <button class="viewer-next" type="button" aria-label="下一张图片" title="下一张图片"><ChevronRight size={26} aria-hidden="true" /></button>
+    </div>
+    <p class="viewer-caption"></p>
+  </dialog>
+</div>
+<script>
+  import '../scripts/article-reader';
+</script>

@@ -1,0 +1,114 @@
+---
+import type { Post } from '../lib/posts';
+import { getExcerpt, getReadingTime, getWordCount } from '../lib/excerpt';
+import { highlightText } from '../lib/highlight';
+import '../styles/post-card.css';
+import { ArrowUpRight, BookOpenText, CalendarDays, Clock, CodeXml, Gamepad2, Rocket } from '@lucide/astro';
+
+const { post, compact = false, preview = false, hidden = false, highlight = '' } = Astro.props as { post: Post; compact?: boolean; preview?: boolean; hidden?: boolean; highlight?: string };
+const CategoryIcon = post.category === '技术笔记' ? CodeXml : post.category === '项目' ? Rocket : post.category === '动漫' ? Gamepad2 : BookOpenText;
+// 分类 → 封面主题。四个分类各一套配色，无封面的文章也能一眼分出类别
+const THEMES: Record<string, { tone: string; signature: string }> = {
+  技术笔记: { tone: 'blue', signature: 'BAKAMIKU · TECH' },
+  项目: { tone: 'violet', signature: 'BAKAMIKU · PROJECT' },
+  动漫: { tone: 'pink', signature: 'BAKAMIKU · ANIME' },
+  碎碎念: { tone: 'amber', signature: 'BAKAMIKU · NOTE' },
+};
+const theme = THEMES[post.category] ?? { tone: 'blue', signature: 'BAKAMIKU · JOURNAL' };
+const tone = theme.tone;
+// 同分类的两张卡不能长得一模一样：用 slug 算一个小哈希，只改「渐变角度 + 光斑位置」两件事
+const seed = [...post.slug].reduce((acc, ch) => (acc * 31 + ch.codePointAt(0)!) % 997, 7);
+const artStyle = [
+  `--art-angle: ${118 + (seed % 4) * 16}deg`,
+  `--art-gx: ${16 + (seed % 5) * 15}%`,
+  `--art-gy: ${8 + (seed % 3) * 13}%`,
+].join('; ');
+const displayDate = post.date.replace(/-/g, '.');
+const excerpt = post.description.trim() || getExcerpt(post.body);
+const wordCount = getWordCount(post.body);
+const readingTime = getReadingTime(post.body);
+const titleHtml = highlightText(post.title, highlight);
+const excerptHtml = highlightText(excerpt || '记录一点热爱，分享一点思考。', highlight);
+const CardLink = preview ? 'div' : 'a';
+---
+<article class:list={['journal-card', { compact }]} data-tone={tone} data-category={post.category} data-tags={post.tags.join('|')} hidden={hidden}>
+  <CardLink class="journal-card__link" href={preview ? undefined : `/posts/${post.slug}`} tabindex={preview ? 0 : undefined} aria-label={`${preview ? '卡片预览：' : '阅读 '}${post.title}`}>
+    <div class="journal-card__cover">
+      {post.cover ? <img src={post.cover} alt="" width="800" height="450" loading="lazy" decoding="async" /> :
+        <div class="journal-card__art" aria-hidden="true" style={artStyle}>
+          <span class="journal-card__art-mark"><CategoryIcon size={116} stroke-width={1} /></span>
+          <span class="journal-card__art-frame"></span>
+          <span class="journal-card__art-label">{post.category}</span>
+          <span class="journal-card__art-sign">{theme.signature}</span>
+          <span class="journal-card__art-sheen"></span>
+        </div>
+      }
+      {post.badge && <span class="journal-card__badge" title={post.badge}>
+          <svg class="journal-card__clasp" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <defs>
+              <radialGradient id="jc-enamel" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="#ffffff" />
+                <stop offset="25%" stop-color="#fbcfe8" />
+                <stop offset="75%" stop-color="#f43f5e" />
+                <stop offset="100%" stop-color="#9f1239" />
+              </radialGradient>
+            </defs>
+            <g stroke="#fef08a" stroke-width="1.2" stroke-linejoin="round" fill="url(#jc-enamel)">
+              <path d="M 20 20 C 12 10, 10 0, 20 5 C 30 0, 28 10, 20 20 Z" />
+              <path d="M 20 20 C 12 10, 10 0, 20 5 C 30 0, 28 10, 20 20 Z" transform="rotate(72 20 20)" />
+              <path d="M 20 20 C 12 10, 10 0, 20 5 C 30 0, 28 10, 20 20 Z" transform="rotate(144 20 20)" />
+              <path d="M 20 20 C 12 10, 10 0, 20 5 C 30 0, 28 10, 20 20 Z" transform="rotate(216 20 20)" />
+              <path d="M 20 20 C 12 10, 10 0, 20 5 C 30 0, 28 10, 20 20 Z" transform="rotate(288 20 20)" />
+              <circle cx="20" cy="20" r="3" fill="#fef08a" stroke="none" />
+            </g>
+          </svg>
+          <span class="journal-card__plaque">
+            {post.badge.split('.').map((part, i) => (
+              <Fragment>{i > 0 && <span class="journal-card__dot">·</span>}{part}</Fragment>
+            ))}
+          </span>
+          <span class="journal-card__tassel" aria-hidden="true">
+            <svg viewBox="0 0 24 50" fill="none">
+              <defs>
+                <linearGradient id="jc-gold" x1="0" y1="0" x2="24" y2="50" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#fef08a" />
+                  <stop offset="0.5" stop-color="#fbd38d" />
+                  <stop offset="1" stop-color="#d97706" />
+                </linearGradient>
+                <linearGradient id="jc-pink" x1="12" y1="14" x2="12" y2="50" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#f472b6" />
+                  <stop offset="1" stop-color="#be185d" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2C9 2 7 5 9 8C11 11 12 14 12 14C12 14 13 11 15 8C17 5 15 2 12 2Z" stroke="url(#jc-gold)" stroke-width="1.2" />
+              <path d="M7 6C4 5 1 7 2 10C3 13 6 12 8 11" stroke="url(#jc-gold)" stroke-width="1.2" stroke-linecap="round" />
+              <path d="M17 6C20 5 23 7 22 10C21 13 18 12 16 11" stroke="url(#jc-gold)" stroke-width="1.2" stroke-linecap="round" />
+              <rect x="10" y="14" width="4" height="3" rx="1" fill="url(#jc-gold)" />
+              <path d="M10 17 L8 45" stroke="url(#jc-pink)" stroke-width="0.8" stroke-linecap="round" />
+              <path d="M11 17 L10 48" stroke="url(#jc-gold)" stroke-width="0.6" stroke-linecap="round" />
+              <path d="M12 17 L12 50" stroke="url(#jc-pink)" stroke-width="0.8" stroke-linecap="round" />
+              <path d="M13 17 L14 47" stroke="url(#jc-gold)" stroke-width="0.6" stroke-linecap="round" />
+              <path d="M14 17 L16 44" stroke="url(#jc-pink)" stroke-width="0.8" stroke-linecap="round" />
+            </svg>
+          </span>
+        </span>}
+    </div>
+    <div class="journal-card__copy">
+      <div class="journal-card__taxonomy">
+        <span class="journal-card__category"><CategoryIcon size={13} aria-hidden="true" /><span>{post.category}</span></span>
+        {post.tags.slice(0, 2).map(tag => <span class="journal-card__tag" title={tag}>#{tag}</span>)}
+        {post.tags.length > 2 && <span class="journal-card__more" title={post.tags.slice(2).join('、')} aria-label={`另有 ${post.tags.length - 2} 个小类：${post.tags.slice(2).join('、')}`}>+{post.tags.length - 2}</span>}
+      </div>
+      <h3 class="journal-card__title" title={post.title} set:html={titleHtml}></h3>
+      <p class="journal-card__excerpt" set:html={excerptHtml}></p>
+      <div class="journal-card__meta">
+        <span class="journal-card__details">
+          <time datetime={post.date}><CalendarDays size={13} aria-hidden="true" />{displayDate}</time>
+          <span class="journal-card__word-count">{wordCount.toLocaleString('zh-CN')} 字</span>
+          <span class="journal-card__reading-time"><Clock size={13} aria-hidden="true" />约 {readingTime} 分钟</span>
+        </span>
+        <span class="journal-card__read">阅读文章<ArrowUpRight size={16} aria-hidden="true" /></span>
+      </div>
+    </div>
+  </CardLink>
+</article>

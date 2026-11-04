@@ -1,0 +1,35 @@
+---
+import { getCategories, getPosts } from '../lib/posts';
+
+interface Props {
+  /** 标题 id，同一页面渲染两次时必须区分，否则 aria-labelledby 会撞 */
+  titleId?: string;
+  /** side：≥1280 放左栏的那一份；rail：<1280 跟随侧栏到列表下方的那一份 */
+  variant?: 'side' | 'rail';
+}
+
+const { titleId = 'site-stats-title', variant = 'rail' } = Astro.props;
+const categories = await getCategories();
+const posts = await getPosts();
+const count = (name: string) => posts.filter(post => post.category === name).length;
+const tags = [...new Set(posts.flatMap(post => post.tags))].slice(0, 12);
+---
+<section
+  class:list={['side-section', 'site-stats', variant === 'side' ? 'site-stats--side' : 'site-stats--rail']}
+  aria-labelledby={titleId}
+>
+  <h2 id={titleId}>站点统计</h2>
+  <ul>
+    {categories.map(item => (
+      <li>
+        <a href={`/articles?category=${encodeURIComponent(item)}`}>
+          <span>{item}</span><b>{count(item)}</b>
+        </a>
+        <i class="stat-bar" style={`--ratio: ${posts.length ? Math.round(count(item) / posts.length * 100) : 0}%`} aria-hidden="true"></i>
+      </li>
+    ))}
+  </ul>
+  <div class="tag-list">
+    {tags.map(tag => <a href={`/articles?q=${encodeURIComponent(tag)}`}>{tag}</a>)}
+  </div>
+</section>

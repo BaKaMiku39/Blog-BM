@@ -1,0 +1,16 @@
+---
+import { House, ArrowUpRight } from '@lucide/astro';
+import { config } from '../config';
+
+// 开源版：打招呼 + 一句自述 + 两个入口（关于我 / 代码仓库）。
+// 语气是「小窝」不是「站点」，也不放吉祥物图形 —— 上一版那只手绘猫被否了。
+const repo = config.env.social.github;
+---
+<section class="widget-card welcome-card" aria-label="欢迎来访者">
+  <h2 class="widget-title"><House size={15} aria-hidden="true" />欢迎来到我的小窝<span class="welcome-card__tag">开源</span></h2>
+  <p>我是 BaKaMiku，一个喜欢把东西真正做出来的人。这里堆着技术笔记、项目记录，和一点没什么用的碎碎念——写代码，也写喜欢的世界。随便翻翻，别客气～</p>
+  <div class="widget-actions">
+    <a href="/about">关于我</a>
+    <a href={repo || '/about'} target={repo ? '_blank' : undefined} rel={repo ? 'noopener noreferrer' : undefined}>GitHub 仓库 <ArrowUpRight size={12} aria-hidden="true" /></a>
+  </div>
+</section>

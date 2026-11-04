@@ -1,0 +1,217 @@
+---
+---
+<div class="fortune" data-fortune>
+  <button class="fortune__trigger" type="button" data-fortune-open aria-label="打开抽签，抽一支今日签">
+    <span class="fortune__cord" aria-hidden="true"></span>
+    <span class="fortune__knot" aria-hidden="true"></span>
+    <span class="fortune__paper">
+      <span class="fortune__txt">抽个签</span>
+      <span class="fortune__seal" aria-hidden="true"></span>
+    </span>
+  </button>
+
+  <dialog class="fortune__dialog" data-fortune-dialog aria-label="今日一签">
+    <div class="fortune__card" data-fortune-card>
+      <svg class="fortune__cord" viewBox="0 0 56 44" fill="none" aria-hidden="true">
+        <path d="M20 42c-4-10-6-18 0-24M36 42c4-10 6-18 0-24M20 18c3-7 13-7 16 0" stroke="#c0513f" stroke-width="3" stroke-linecap="round" />
+        <ellipse cx="28" cy="41" rx="4.2" ry="3.2" fill="#a83a31" />
+      </svg>
+
+      <div class="fortune__body" data-fortune-body>
+        <p class="fortune__eyebrow">今日一签</p>
+        <p class="fortune__rank" data-fortune-rank>……</p>
+        <p class="fortune__line" data-fortune-line>正在抽……</p>
+        <a class="fortune__post" data-fortune-post hidden></a>
+      </div>
+
+      <div class="fortune__actions">
+        <button class="fortune__again" type="button" data-fortune-again>再抽一次</button>
+        <button class="fortune__close" type="button" data-fortune-close>收起</button>
+      </div>
+      <p class="fortune__hint" data-fortune-hint></p>
+
+      <svg class="fortune__seal" viewBox="0 0 34 34" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" fill="#c0513f" />
+        <g transform="translate(17 17)" fill="#fff6f0">
+          <ellipse rx="3.3" ry="4.3" cy="-4.4" />
+          <ellipse rx="3.3" ry="4.3" cy="-4.4" transform="rotate(72)" />
+          <ellipse rx="3.3" ry="4.3" cy="-4.4" transform="rotate(144)" />
+          <ellipse rx="3.3" ry="4.3" cy="-4.4" transform="rotate(216)" />
+          <ellipse rx="3.3" ry="4.3" cy="-4.4" transform="rotate(288)" />
+        </g>
+      </svg>
+    </div>
+  </dialog>
+</div>
+
+<script>
+  // 六支签加一句人话，别写太满
+  const fortunes = [
+    { rank: '大吉', line: '今天适合把喜欢的歌单从头听一遍。' },
+    { rank: '中吉', line: '想做的事，先做五分钟就好。' },
+    { rank: '小吉', line: '抬头看一眼窗外，天色比想象的好。' },
+    { rank: '吉', line: '记得给自己留一段什么都不用做的时间。' },
+    { rank: '末吉', line: '慢一点也没关系，路还长。' },
+    { rank: '平', line: '今天适合早点睡。' },
+  ];
+
+  const LIMIT = 3;
+  const STORE = 'fortune-draws';
+  const zone = 'Asia/Shanghai';
+
+  const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
+
+  type FortunePost = { title: string; slug: string };
+  type FortuneState = { date: string; count: number; rank?: string; line?: string; post?: FortunePost | null };
+
+  function readState(): FortuneState {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORE) || 'null') as FortuneState | null;
+      if (raw && raw.date === today()) {
+        return { date: raw.date, count: Number(raw.count) || 0, rank: raw.rank, line: raw.line, post: raw.post ?? null };
+      }
+    } catch {
+      // 读不到就当作今天还没抽过
+    }
+    return { date: today(), count: 0, rank: undefined, line: undefined, post: null };
+  }
+
+  function writeState(state: FortuneState) {
+    try {
+      localStorage.setItem(STORE, JSON.stringify(state));
+    } catch {
+      // 隐私模式写不进去只会丢掉跨刷新的记忆，不影响本次使用
+    }
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-fortune]');
+  if (root) {
+    const dialog = root.querySelector<HTMLDialogElement>('[data-fortune-dialog]')!;
+    const card = root.querySelector<HTMLElement>('[data-fortune-card]')!;
+    const trigger = root.querySelector<HTMLButtonElement>('[data-fortune-open]')!;
+    const again = root.querySelector<HTMLButtonElement>('[data-fortune-again]')!;
+    const close = root.querySelector<HTMLButtonElement>('[data-fortune-close]')!;
+    const rankEl = root.querySelector<HTMLElement>('[data-fortune-rank]')!;
+    const lineEl = root.querySelector<HTMLElement>('[data-fortune-line]')!;
+    const postEl = root.querySelector<HTMLAnchorElement>('[data-fortune-post]')!;
+    const body = root.querySelector<HTMLElement>('[data-fortune-body]')!;
+    const hint = root.querySelector<HTMLElement>('[data-fortune-hint]')!;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // 弹窗是 position:fixed，挂到 body 上，样式只受自己的类控制
+    document.body.append(dialog);
+    let busy = false;
+    let failed = false;
+
+    // 滚动时签条绕绳结摆一下：动画进行中不重置，避免连续滚动事件把关键帧打断成抖动
+    const paper = root.querySelector<HTMLElement>('.fortune__paper')!;
+    let swaying = false;
+    paper.addEventListener('animationend', event => {
+      if (event.animationName === 'fortune-sway') {
+        paper.classList.remove('is-sway');
+        swaying = false;
+      }
+    });
+    addEventListener('scroll', () => {
+      if (swaying || reduce.matches) return;
+      // 挂件收起时（首页顶栏透明态）不空转
+      if (getComputedStyle(root).visibility === 'hidden') return;
+      swaying = true;
+      paper.classList.add('is-sway');
+    }, { passive: true });
+
+    const syncChrome = () => {
+      const left = Math.max(LIMIT - readState().count, 0);
+      again.disabled = left === 0 || busy;
+      again.textContent = left === 0 ? '明天再抽' : '再抽一次';
+      hint.textContent =
+        failed ? '没抓到签，网络开小差了。再试一次？' :
+        left === 0 ? '今天的重抽次数用完啦，明天再来。' :
+        left === 1 ? '还能再抽 1 次，且抽且珍惜～' :
+        `今天还能再抽 ${left} 次，想换就再抽一次～`;
+    };
+
+    // 把一支签画到卡片上（post 可空：还没拿到文章链接时先只出签文）
+    const showResult = (rank: string, line: string, post: FortunePost | null) => {
+      rankEl.textContent = rank;
+      lineEl.textContent = line;
+      if (post) {
+        postEl.href = `/posts/${post.slug}`;
+        postEl.textContent = `去看《${post.title}》`;
+        postEl.hidden = false;
+      } else {
+        postEl.hidden = true;
+        postEl.removeAttribute('href');
+      }
+    };
+
+    // counts：true 时计入每日重抽限额；只有当天第一次打开的自动抽不计数
+    const draw = async (counts: boolean) => {
+      if (busy) return;
+      const state = readState();
+      if (counts && state.count >= LIMIT) {
+        syncChrome();
+        return;
+      }
+      busy = true;
+      again.disabled = true;
+      hint.textContent = '正在为你抽签…';
+      if (counts) writeState({ ...state, count: state.count + 1 });
+
+      const pick = fortunes[Math.floor(Math.random() * fortunes.length)];
+      const still = reduce.matches;
+
+      if (!still) {
+        body.classList.remove('is-in');
+        // 重复点击时要重启动画，先摘类再强制回流
+        card.classList.remove('is-drawing');
+        void card.offsetWidth;
+        card.classList.add('is-drawing');
+        window.setTimeout(() => card.classList.remove('is-drawing'), 780);
+        await new Promise(resolve => window.setTimeout(resolve, 300));
+      }
+
+      showResult(pick.rank, pick.line, null);
+      // 签文先落库（文章链接拿到后补写），刷新/重开显示的就是这支
+      writeState({ ...readState(), rank: pick.rank, line: pick.line, post: null });
+
+      if (!still) body.classList.add('is-in');
+
+      try {
+        const response = await fetch('/api/random', { headers: { accept: 'application/json' } });
+        const data = await response.json() as { post?: FortunePost | null };
+        failed = false;
+        if (data?.post) {
+          showResult(pick.rank, pick.line, data.post);
+          writeState({ ...readState(), post: data.post });
+        }
+      } catch {
+        // 拿不到文章就只留签文，不闪空，提示用户网络异常
+        failed = true;
+        syncChrome();
+      }
+
+      if (!still) await new Promise(resolve => window.setTimeout(resolve, 40));
+      busy = false;
+      syncChrome();
+    };
+
+    syncChrome();
+
+    trigger.addEventListener('click', () => {
+      dialog.showModal();
+      const stored = readState();
+      // 只有当天第一次打开自动抽；之后重开都显示上一支，想换自己点重抽
+      if (stored.rank && stored.line) {
+        showResult(stored.rank, stored.line, stored.post ?? null);
+        syncChrome();
+      } else {
+        void draw(false);
+      }
+    });
+    again.addEventListener('click', () => { void draw(true); });
+    close.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+  }
+</script>

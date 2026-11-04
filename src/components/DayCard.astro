@@ -1,0 +1,81 @@
+---
+import { Moon, Sun } from '@lucide/astro';
+import { readClock } from '../lib/clock';
+import { almanacLabel } from '../lib/almanac';
+import { dayArtOfTheDay } from '../lib/dayart';
+
+interface Props {
+  image?: string;
+  imageAlt?: string;
+}
+
+const { image = dayArtOfTheDay(), imageAlt = '' } = Astro.props;
+const clock = readClock();
+const daylight = clock.hour >= 6 && clock.hour < 18;
+const night = clock.hour >= 23 || clock.hour < 5;
+const almanac = almanacLabel();
+---
+<section class="day-card" data-day-card data-daylight={String(daylight)} data-night={String(night)} aria-label="当前时间与问候">
+  <i class="day-card__deco" data-deco-slot="daycard" aria-hidden="true"></i>
+  <div class="day-card__head">
+    <p class="day-card__greet"><span data-day-greet>{clock.greeting}</span><span data-day-line>，{clock.line}</span></p>
+    <span class="day-card__icon" aria-hidden="true">
+      <Sun class="day-card__sun" size={18} />
+      <Moon class="day-card__moon" size={18} />
+    </span>
+  </div>
+  <div class="day-card__clock">
+    <time class="day-card__time" data-day-time>{clock.time}</time>
+    <span class="day-card__meta"><span data-day-week>{clock.weekday}</span><b data-day-date>{clock.date}</b></span>
+  </div>
+  <p class="day-card__almanac"><span data-day-almanac>{almanac}</span></p>
+  <figure class="day-card__art">
+    <img data-day-art src={image} alt={imageAlt} width="560" height="315" loading="lazy" decoding="async" />
+    <span class="day-card__art-sheen" aria-hidden="true"></span>
+  </figure>
+</section>
+
+<script>
+  import { readClock } from '../lib/clock';
+  import { almanacLabel } from '../lib/almanac';
+  import { dayArtOfTheDay } from '../lib/dayart';
+
+  const card = document.querySelector<HTMLElement>('[data-day-card]');
+  if (card) {
+    const field = (name: string) => card.querySelector<HTMLElement>(`[data-day-${name}]`)!;
+    const time = field('time');
+    const greet = field('greet');
+    const line = field('line');
+    const week = field('week');
+    const date = field('date');
+    const almanac = field('almanac');
+    const art = card.querySelector<HTMLImageElement>('[data-day-art]');
+    let painted = '';
+    let paintedDate = '';
+
+    const paint = () => {
+      const clock = readClock();
+      const stamp = `${clock.time} ${clock.weekday} ${clock.date}`;
+      if (stamp !== painted) {
+        // 首屏那张图是服务端抽的，前端不要再抽一次；只有真的跨了零点才换
+        const dateChanged = painted !== '' && clock.date !== paintedDate;
+        painted = stamp;
+        paintedDate = clock.date;
+        time.textContent = clock.time;
+        greet.textContent = clock.greeting;
+        line.textContent = `，${clock.line}`;
+        week.textContent = clock.weekday;
+        date.textContent = clock.date;
+        almanac.textContent = almanacLabel();
+        // 跨零点才换一张新的
+        if (art && dateChanged) art.src = dayArtOfTheDay();
+        card.dataset.daylight = String(clock.hour >= 6 && clock.hour < 18);
+        card.dataset.night = String(clock.hour >= 23 || clock.hour < 5);
+      }
+      // 对齐到下一分钟再刷新，不做秒级空转
+      window.setTimeout(paint, 60_000 - (Date.now() % 60_000) + 40);
+    };
+
+    paint();
+  }
+</script>
