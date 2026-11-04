@@ -194,15 +194,12 @@
   -webkit-backdrop-filter: blur(14px) saturate(120%);
   backdrop-filter: blur(14px) saturate(120%);
 }
-/* 有真实封面时，纸牌换成不透明的米白：半透明玻璃压在花哨插画上，
-   字和背景会糊成一片，反而比没有角标更难看。 */
-.journal-card__badge[data-on-photo] .journal-card__plaque {
-  background: linear-gradient(135deg, rgba(255, 253, 248, .97) 0%, rgba(253, 245, 236, .96) 58%, rgba(250, 238, 231, .96) 100%);
-  box-shadow:
-    inset 0 0 12px rgba(255, 214, 178, .35),
-    0 10px 24px -8px rgba(30, 14, 24, .55);
-}
-.journal-card__badge[data-on-photo] .journal-card__plaque::before { opacity: .5; }
+/* 有真实封面时，整枚御守收起。
+   原因：插画本身信息已经够满，纸牌挂上去会把画面切成两块（实测把插画左上的
+   「天气名片」挡出一圈夹心），半透明反而更脏；不透明又像贴了张便签。
+   角标的意义是给「没配图的卡」标版本，有图就不需要它。
+   想让它回来：把下面这条删掉即可，纸牌会自动回到玻璃底。 */
+.journal-card__badge[data-on-photo] { display: none; }
 /* 纸纤维：横密纵疏两道极淡的线，远看是纸，近看有颗粒 */
 .journal-card__plaque::before {
   content: '';
