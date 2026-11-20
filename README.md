@@ -36,9 +36,21 @@ npm run dev               # http://localhost:4321
 
 ## 音乐播放器
 
-播放器不含音频文件，所有歌都走 `/meting/api?server=netease&type=url&id=<ID>`。`/meting` **不属于本项目**，它是 [Meting](https://github.com/metowolf/MetingAPI) —— 把网易云、QQ、酷狗、百度的播放地址和歌词统一成一个 URL 的中间层，需要自己架。
+播放器不含音频文件，所有歌都走 `/meting/api?server=netease&type=url&id=<ID>`。`/meting` **不属于本项目**，它是 Meting-API —— 把网易云、QQ 音乐等平台的播放地址和歌词统一成一个 URL 的中间层，需要自己架。
 
-1. 起一个 Meting 服务（Docker 最省事），监听本地端口，例如 3030
+本站用的是 **[mikus-loli/Meting-API](https://github.com/mikus-loli/Meting-API)**（`xizeyoupan/Meting-API` 的 fork，上游是 [metowolf/Meting-API](https://github.com/metowolf/Meting-API)）。它带管理后台、Cookie 管理和自动续期，配好 cookie 之后 VIP 曲目也能出完整音频，不会三十秒就断。部署、cookie 怎么填、反代要注意什么，都以该仓库的 README 为准。
+
+最省事的起法（和本站线上一致）：
+
+```bash
+docker run -d --name meting-api --restart always \
+  -p 127.0.0.1:3030:3000 \
+  -e UID=1010 -e GID=1010 -e PORT=3000 \
+  -v /opt/meting/data:/app/data \
+  ghcr.io/mikus-loli/meting-api:latest
+```
+
+1. 容器只监听 `127.0.0.1:3030`，不直接暴露公网；`/opt/meting/data` 里放 cookie、日志和配置，记得备份
 2. nginx 反代，注意 `proxy_pass` 结尾的斜杠负责剥掉前缀：
 
 ```nginx
@@ -47,6 +59,9 @@ location /meting/ {
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # 关键：告诉 Meting-API 公网地址，否则它返回 127.0.0.1 的音频地址，浏览器放不了
+    proxy_set_header X-Forwarded-Host $host/meting;
 }
 ```
 
