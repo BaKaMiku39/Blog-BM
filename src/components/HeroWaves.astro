@@ -1,18 +1,34 @@
 ---
-// 首页 Hero 与文章区之间的水波过渡：四层同源波浪视差漂移，
+// 首页 Hero 与文章区之间的水波过渡：四层异形波浪 + 随机相位漂移。
 // 前三层半透明制造景深，末层实色 --wash 保证底部与内容区无缝衔接。
+// 两条不同振幅的 path 交替，避免四层看起来像同一条曲线叠印；
+// 相位由脚本在每次加载时随机，CSS 里保留一组错开的回退值（无 JS 也可看）。
 // 手法参考 rainzt.cn 的 header-waves（经典 CodePen gentle-wave 变体）。
 ---
 <div class="hero-waves" aria-hidden="true">
   <svg class="hero-waves__svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="geometricPrecision" focusable="false">
     <defs>
-      <path id="hero-gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z" />
+      <path id="hero-wave-a" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v48h-352z" />
+      <path id="hero-wave-b" d="M-160 47c26 0 60-12 88-12s62 12 88 12 60-12 88-12 62 12 88 12v46h-352z" />
     </defs>
     <g class="hero-waves__parallax">
-      <use href="#hero-gentle-wave" x="48" y="0" />
-      <use href="#hero-gentle-wave" x="48" y="3" />
-      <use href="#hero-gentle-wave" x="48" y="5" />
-      <use href="#hero-gentle-wave" x="48" y="7" />
+      <use href="#hero-wave-b" x="48" y="0" />
+      <use href="#hero-wave-a" x="48" y="5" />
+      <use href="#hero-wave-b" x="48" y="9" />
+      <use href="#hero-wave-a" x="48" y="13" />
     </g>
   </svg>
 </div>
+
+<script>
+  // 每次加载给四层各自一个随机相位与轻微随机的周期，波浪不会整齐叠在一起
+  const layers = Array.from(document.querySelectorAll<SVGUseElement>('.hero-waves__parallax > use'));
+  if (layers.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const baseDurations = [34, 46, 58, 72];
+    layers.forEach((layer, index) => {
+      const duration = baseDurations[index % baseDurations.length] * (0.85 + Math.random() * 0.3);
+      layer.style.animationDuration = `${duration.toFixed(2)}s`;
+      layer.style.animationDelay = `${(-Math.random() * duration).toFixed(2)}s`;
+    });
+  }
+</script>
