@@ -1,5 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import ProfileColumn from '../components/ProfileColumn.astro';
+import SiteSidebar from '../components/SiteSidebar.astro';
 import PostCard from '../components/PostCard.astro';
 import { getCategories, getPosts, resolveCategory } from '../lib/posts';
 const categories = await getCategories();
@@ -27,4 +29,19 @@ const scored = inCategory.map(post => {
 }).filter(item => !q || item.score > 0);
 const results = q ? scored.sort((a, b) => b.score - a.score).map(item => item.post) : scored.map(item => item.post);
 ---
-<Base title="文章"><div class="shell page-content"><div class="page-intro"><span class="eyebrow">JOURNAL</span><h1>文章与记录</h1><p>技术笔记、项目作品，以及动漫游戏的随想。</p></div><form class="article-search" action="/articles"><input type="search" name="q" value={qRaw} placeholder="搜索文章或标签..." aria-label="搜索文章或标签" /><button type="submit">搜索</button></form><div class="filter-bar"><a class:list={[{ active: !category }]} href={filterHref()}>全部</a>{categories.map(item => <a class:list={[{ active: category === item }]} href={filterHref(item)}>{item}</a>)}</div>{q && <p class="search-summary">“{qRaw}” 的搜索结果：{results.length} 篇</p>}{!q && <div class="listing-head"><span>{category || '全部文章'}</span><b>{results.length} 篇</b></div>}<div class="post-grid listing-grid">{results.map(post => <PostCard post={post} highlight={qRaw} />)}</div>{q && results.length === 0 && <div class="empty-state"><p>没有和「{qRaw}」匹配的文章。</p><a href="/articles">清空搜索，浏览全部</a></div>}{!q && results.length === 0 && <div class="empty-state"><p>这里还没有文章。</p><a href="/">回首页</a></div>}</div></Base>
+<Base title="文章">
+  <div class="shell home-grid articles-grid">
+    <ProfileColumn />
+    <div class="main-column articles-page">
+      <div class="page-intro"><span class="eyebrow">JOURNAL</span><h1>文章与记录</h1><p>技术笔记、项目作品，以及动漫游戏的随想。</p></div>
+      <form class="article-search" action="/articles"><input type="search" name="q" value={qRaw} placeholder="搜索文章或标签..." aria-label="搜索文章或标签" /><button type="submit">搜索</button></form>
+      <div class="filter-bar"><a class:list={[{ active: !category }]} href={filterHref()}>全部</a>{categories.map(item => <a class:list={[{ active: category === item }]} href={filterHref(item)}>{item}</a>)}</div>
+      {q && <p class="search-summary">“{qRaw}” 的搜索结果：{results.length} 篇</p>}
+      {!q && <div class="listing-head"><span>{category || '全部文章'}</span><b>{results.length} 篇</b></div>}
+      <div class="post-grid listing-grid">{results.map(post => <PostCard post={post} highlight={qRaw} />)}</div>
+      {q && results.length === 0 && <div class="empty-state"><p>没有和「{qRaw}」匹配的文章。</p><a href="/articles">清空搜索，浏览全部</a></div>}
+      {!q && results.length === 0 && <div class="empty-state"><p>这里还没有文章。</p><a href="/">回首页</a></div>}
+    </div>
+    <SiteSidebar />
+  </div>
+</Base>

@@ -1,42 +1,48 @@
 ---
 import Base from '../layouts/Base.astro';
+import ProfileColumn from '../components/ProfileColumn.astro';
+import SiteSidebar from '../components/SiteSidebar.astro';
 ---
 <Base title="关于">
-  <div class="shell page-content about-page">
-    <div class="about-hero">
-      <img src="/images/avatar.webp" alt="BaKaMiku 的头像" width="88" height="88" />
-      <div>
-        <span class="eyebrow">ABOUT ME</span>
-        <h1>你好，我是 BaKaMiku。</h1>
-        <p>写代码，也写喜欢的世界</p>
+  <div class="shell home-grid about-grid">
+    <ProfileColumn />
+    <div class="main-column about-page">
+      <div class="about-hero">
+        <img src="/images/avatar.webp" alt="BaKaMiku 的头像" width="88" height="88" />
+        <div>
+          <span class="eyebrow">ABOUT ME</span>
+          <h1>你好，我是 BaKaMiku。</h1>
+          <p>写代码，也写喜欢的世界</p>
+        </div>
+      </div>
+      <div class="about-body">
+        <p>这里记录技术学习笔记、项目作品，也留一点空间给动漫和游戏。希望能把学习过程中的问题和收获写清楚，让未来的自己和偶然路过的你都能有所收获。</p>
+        <p>写下来的东西不一定都对，但一定是我当时真实的理解。如果恰好对你有用，那再好不过。</p>
+      </div>
+      <div class="about-facts">
+        <section class="about-card">
+          <h3>这个博客</h3>
+          <p>Astro + Node.js 搭建，文章以 Markdown 存放在自己的服务器上，草稿与发布分开，写完再决定要不要公开。</p>
+        </section>
+        <section class="about-card">
+          <h3>写了些什么</h3>
+          <ul>
+            <li>技术笔记：学习过程里的问题与解法</li>
+            <li>项目：做过的东西与踩过的坑</li>
+            <li>动漫：喜欢的作品与随想</li>
+          </ul>
+        </section>
+        <section class="about-card">
+          <h3>关于视觉</h3>
+          <p>首屏是樱花雪街的插画，雪花与花瓣随页面飘落；深色模式下换成夜色版本，夜里读起来更舒服。</p>
+        </section>
+      </div>
+      <div class="about-links">
+        <a href="/articles?category=技术笔记">读技术笔记 →</a>
+        <a href="/articles?category=项目">看项目作品 →</a>
+        <a href="/articles?category=动漫">翻动漫随记 →</a>
       </div>
     </div>
-    <div class="about-body">
-      <p>这里记录技术学习笔记、项目作品，也留一点空间给动漫和游戏。希望能把学习过程中的问题和收获写清楚，让未来的自己和偶然路过的你都能有所收获。</p>
-      <p>写下来的东西不一定都对，但一定是我当时真实的理解。如果恰好对你有用，那再好不过。</p>
-    </div>
-    <div class="about-facts">
-      <section class="about-card">
-        <h3>这个博客</h3>
-        <p>Astro + Node.js 搭建，文章以 Markdown 存放在自己的服务器上，草稿与发布分开，写完再决定要不要公开。</p>
-      </section>
-      <section class="about-card">
-        <h3>写了些什么</h3>
-        <ul>
-          <li>技术笔记：学习过程里的问题与解法</li>
-          <li>项目：做过的东西与踩过的坑</li>
-          <li>动漫：喜欢的作品与随想</li>
-        </ul>
-      </section>
-      <section class="about-card">
-        <h3>关于视觉</h3>
-        <p>首屏是樱花雪街的插画，雪花与花瓣随页面飘落；深色模式下换成夜色版本，夜里读起来更舒服。</p>
-      </section>
-    </div>
-    <div class="about-links">
-      <a href="/articles?category=技术笔记">读技术笔记 →</a>
-      <a href="/articles?category=项目">看项目作品 →</a>
-      <a href="/articles?category=动漫">翻动漫随记 →</a>
-    </div>
+    <SiteSidebar />
   </div>
 </Base>

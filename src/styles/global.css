@@ -2567,6 +2567,28 @@ html.is-booting { scroll-behavior: auto; }
   padding-bottom: 34px;
 }
 
+/* ---- 文章列表页 / 关于页 ---- */
+/* 同样挂进 .home-grid 三栏骨架：左栏名片、中间正文、右栏时间名片/统计。
+   栏宽与响应式断点全部交给 .home-grid，这里只管中栏自身的节奏。 */
+.articles-grid,
+.about-grid {
+  padding-bottom: 34px;
+}
+
+.articles-page,
+.about-grid .about-page {
+  min-width: 0;
+  max-width: none;
+}
+
+.articles-page .page-intro {
+  margin-bottom: 4px;
+}
+
+.articles-page .article-search {
+  max-width: 520px;
+}
+
 .links-page {
   min-width: 0;
 }
