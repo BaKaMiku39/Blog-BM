@@ -1,11 +1,16 @@
 ---
+import { config } from '../config';
 import { playlist } from '../lib/playlist';
 // 每次打开页面随机挑一首开头（用户要求「刷新就换歌」）。
 // 站内翻页不换：那靠 sessionStorage 续播，只有重新加载整页才算新的一轮。
 const startIndex = Math.floor(Math.random() * playlist.length);
 const first = playlist[startIndex];
+// 接口前缀默认走本站反代 /meting；想借用别人的 Meting 服务时，
+// 在 .env 里设 PUBLIC_METING_BASE=https://别人的域名/meting 即可，不用改代码。
+const metingBase = (config.env.media.metingBase || '/meting').replace(/\/+$/, '');
+
 ---
-<div class="bgm" data-bgm data-bgm-start={startIndex}>
+<div class="bgm" data-bgm data-bgm-start={startIndex} data-bgm-base={metingBase}>
   <img class="bgm__cover" data-bgm-cover src={first.pic} alt="" width="60" height="60" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
   <div class="bgm__main">
     <p class="bgm__meta">
@@ -54,10 +59,10 @@ const first = playlist[startIndex];
 
   <!-- 音量浮层：贴着卡片上沿弹出，不挤占播放器里的位置 -->
   <div class="bgm__volpop" data-bgm-volpop>
-    <div class="bgm__volrail" data-bgm-vol role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70">
+    <div class="bgm__volrail" data-bgm-vol role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10">
       <span class="bgm__volfill" data-bgm-volfill></span>
     </div>
-    <span class="bgm__volnum" data-bgm-volnum>70%</span>
+    <span class="bgm__volnum" data-bgm-volnum>10%</span>
   </div>
 
   <!-- 完整歌词：贴在卡片上的浮层，点歌词按钮展开；吸附在栏里时向下弹，浮在底部时向上弹 -->
@@ -72,6 +77,12 @@ const first = playlist[startIndex];
     <div class="bgm__lyrics-body" data-bgm-lyrics-body>
       <p class="bgm__lyrics-empty">正在取歌词…</p>
     </div>
+  </div>
+
+  <!-- 切歌提示：切到新歌时短暂浮现曲目名，之后自动隐去 -->
+  <div class="bgm__toast" data-bgm-toast role="status" aria-live="polite">
+    <span class="bgm__toast-artist" data-bgm-toast-artist></span>
+    <span class="bgm__toast-title" data-bgm-toast-title></span>
   </div>
 
   <audio data-bgm-audio preload="none"></audio>
@@ -109,7 +120,12 @@ const first = playlist[startIndex];
     const totalEl = root.querySelector<HTMLElement>('[data-bgm-total]')!;
     const fillEl = root.querySelector<HTMLElement>('[data-bgm-progress]')!;
     const trackEl = root.querySelector<HTMLElement>('[data-bgm-track]')!;
+    const toast = root.querySelector<HTMLElement>('[data-bgm-toast]')!;
+    const toastArtist = root.querySelector<HTMLElement>('[data-bgm-toast-artist]')!;
+    const toastTitle = root.querySelector<HTMLElement>('[data-bgm-toast-title]')!;
     const tracks = JSON.parse(root.querySelector('[data-bgm-list]')?.textContent || '[]');
+    // 接口前缀：默认本站 /meting，可用 PUBLIC_METING_BASE 指向别人的 Meting
+    const metingBase = (root.dataset.bgmBase || '/meting').replace(/\/+$/, '');
 
     const KEY = 'bgm-state';
     // 服务端已经摇过一次，别在客户端再摇 —— 否则标题会先闪一下第一首
@@ -118,18 +134,18 @@ const first = playlist[startIndex];
     let dragging = false;
     // 播放顺序：随机 / 顺序 / 单曲循环，每次进站都从随机开始（不记忆）
     let order: 'shuffle' | 'in-order' | 'single' = 'shuffle';
-    // 音量：默认 0.7，独立记忆（静音状态不记，刷新后按上次音量播放）
+    // 音量：默认 0.1（10%，不吓人一跳），独立记忆（静音状态不记，刷新后按上次音量播放）
     const VOL_KEY = 'bgm-volume';
     let volume = (() => {
       const raw = localStorage.getItem(VOL_KEY);
       // 注意：Number(null) === 0，没存过的时候必须走默认值，否则一进来就是静音
       const saved = raw === null ? Number.NaN : Number(raw);
-      return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 0.7;
+      return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 0.1;
     })();
 
     const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
     const clock = (s: number) => (Number.isFinite(s) && s > 0 ? `${Math.floor(s / 60)}:${pad(s % 60)}` : '0:00');
-    const srcFor = (i: number) => `/meting/api?server=netease&type=url&id=${tracks[i].id}`;
+    const srcFor = (i: number) => `${metingBase}/api?server=netease&type=url&id=${tracks[i].id}`;
 
     const renderProgress = (ratio: number) => {
       const safe = Math.min(Math.max(ratio || 0, 0), 1);
@@ -270,7 +286,7 @@ const first = playlist[startIndex];
       const token = ++lyricToken;
       resetLyric();
       try {
-        const response = await fetch(`/meting/api?server=netease&type=lrc&id=${id}`);
+        const response = await fetch(`${metingBase}/api?server=netease&type=lrc&id=${id}`);
         const text = await response.text();
         const parsed = parseLrc(text);
         if (token !== lyricToken) return;
@@ -313,6 +329,16 @@ const first = playlist[startIndex];
       }
     };
 
+    // ---- 切歌提示：浮现曲目名，2 秒后隐去 ----
+    let toastTimer = 0;
+    const showToast = (track: { title: string; artist: string }) => {
+      toastArtist.textContent = track.artist;
+      toastTitle.textContent = track.title;
+      toast.classList.add('is-show');
+      clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove('is-show'), 2200);
+    };
+
     const select = (i: number, autoplay = false) => {
       index = (i + tracks.length) % tracks.length;
       audio.src = srcFor(index);
@@ -323,6 +349,7 @@ const first = playlist[startIndex];
       paint();
       save();
       void loadLyric(tracks[index].id);
+      showToast(tracks[index]);
       if (autoplay) void start();
     };
 

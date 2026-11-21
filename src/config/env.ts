@@ -106,6 +106,8 @@ export const env = {
   /** 网易云音乐接口（dev 代理用；线上由 nginx 反代） */
   media: {
     metingTarget: url('METING_TARGET', 'http://127.0.0.1:3030'),
+    /** 播放器请求的接口前缀；想借用别人的 Meting 服务时改成 https://别人的域名/meting */
+    metingBase: text('PUBLIC_METING_BASE', '/meting'),
     metingServer: oneOf('METING_SERVER', ['netease', 'tencent', 'kugou', 'baidu'] as const, 'netease'),
   },
 

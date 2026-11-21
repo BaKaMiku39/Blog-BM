@@ -5,7 +5,7 @@
  * 功能开关）在 `src/config/env.ts`，由 `.env` 提供。
  */
 
-export type NavKey = 'home' | 'articles' | 'about';
+export type NavKey = 'home' | 'articles' | 'links' | 'about';
 
 export interface NavItem {
   key: NavKey;
@@ -54,6 +54,7 @@ export const site = {
   nav: [
     { key: 'home', label: '首页', href: '/' },
     { key: 'articles', label: '文章', href: '/articles' },
+    { key: 'links', label: '友链', href: '/links' },
     { key: 'about', label: '关于', href: '/about' },
   ] satisfies NavItem[],
 
@@ -61,12 +62,13 @@ export const site = {
   footerNav: [
     { label: '首页', href: '/' },
     { label: '文章', href: '/articles' },
+    { label: '友链', href: '/links' },
     { label: '关于', href: '/about' },
   ],
 
-  /** 页脚备案占位符：配置为空时显示 */
-  records: {
-    icpPlaceholder: 'ICP备案号待填写',
-    moePlaceholder: '萌ICP备案号待填写',
+  /** 萌ICP备（icp.gov.moe）：ACG 圈的自娱备案，纯装饰，不是官方备案 */
+  moeIcp: {
+    label: '萌ICP备20265539号',
+    href: 'https://icp.gov.moe/?keyword=20265539',
   },
 } as const;

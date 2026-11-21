@@ -112,11 +112,58 @@ if (reader) {
   const count = dialog.querySelector<HTMLElement>('.viewer-count')!;
   const caption = dialog.querySelector<HTMLElement>('.viewer-caption')!;
   const status = dialog.querySelector<HTMLElement>('.viewer-status')!;
+  const zoomIn = dialog.querySelector<HTMLButtonElement>('.viewer-zoom-in')!;
+  const zoomOut = dialog.querySelector<HTMLButtonElement>('.viewer-zoom-out')!;
+  const zoomReset = dialog.querySelector<HTMLButtonElement>('.viewer-zoom-reset')!;
+  const stage = dialog.querySelector<HTMLElement>('.viewer-stage')!;
   const images = [...reader.querySelectorAll<HTMLImageElement>('.prose img')].filter(image => !image.closest('a, button, summary'));
   let selected = 0;
   let opener: HTMLImageElement | null = null;
   let savedOverflow = '';
   let savedPadding = '';
+
+  // 缩放与平移状态
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 6;
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let startTX = 0;
+  let startTY = 0;
+
+  const applyTransform = () => {
+    largeImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    largeImage.style.cursor = scale > 1 ? (dragging ? 'grabbing' : 'grab') : 'zoom-in';
+    zoomOut.disabled = scale <= MIN_SCALE;
+    zoomIn.disabled = scale >= MAX_SCALE;
+    zoomReset.disabled = scale === MIN_SCALE;
+  };
+
+  const resetZoom = () => {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    applyTransform();
+  };
+
+  const setScale = (next: number, clientX?: number, clientY?: number) => {
+    const clamped = Math.min(Math.max(next, MIN_SCALE), MAX_SCALE);
+    if (clamped === scale) return;
+    // 以鼠标位置为锚点缩放
+    if (clientX !== undefined && clientY !== undefined) {
+      const rect = largeImage.getBoundingClientRect();
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      translateX = translateX - (px - rect.width / 2) * (clamped / scale - 1);
+      translateY = translateY - (py - rect.height / 2) * (clamped / scale - 1);
+    }
+    scale = clamped;
+    if (scale === MIN_SCALE) { translateX = 0; translateY = 0; }
+    applyTransform();
+  };
 
   const showImage = (index: number) => {
     selected = index;
@@ -131,6 +178,7 @@ if (reader) {
     previous.hidden = next.hidden = images.length < 2;
     previous.disabled = index === 0;
     next.disabled = index === images.length - 1;
+    resetZoom();
   };
   const openImage = (image: HTMLImageElement) => {
     if (!image.complete || !image.naturalWidth) return;
@@ -159,25 +207,87 @@ if (reader) {
   });
   closeButton.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => {
-    if (event.target === dialog || event.target === dialog.querySelector('.viewer-stage')) dialog.close();
+    if (event.target === dialog || event.target === stage) dialog.close();
   });
   previous.addEventListener('click', () => { if (selected > 0) showImage(selected - 1); });
   next.addEventListener('click', () => { if (selected < images.length - 1) showImage(selected + 1); });
   dialog.addEventListener('keydown', event => {
     if (event.key === 'ArrowLeft' && selected > 0) { event.preventDefault(); showImage(selected - 1); }
     if (event.key === 'ArrowRight' && selected < images.length - 1) { event.preventDefault(); showImage(selected + 1); }
+    if (event.key === 'Escape' && scale > 1) { event.preventDefault(); resetZoom(); }
   });
   largeImage.addEventListener('error', () => {
     largeImage.hidden = true;
     status.textContent = '图片暂时无法加载';
     status.hidden = false;
   });
+
+  // ---- 缩放与平移 ----
+  zoomIn.addEventListener('click', () => setScale(scale + 0.75, largeImage.getBoundingClientRect().left + largeImage.getBoundingClientRect().width / 2, largeImage.getBoundingClientRect().top + largeImage.getBoundingClientRect().height / 2));
+  zoomOut.addEventListener('click', () => setScale(scale - 0.75));
+  zoomReset.addEventListener('click', resetZoom);
+
+  // 滚轮缩放（触控板双指捏合也走 wheel）
+  stage.addEventListener('wheel', event => {
+    if (!largeImage.complete || !largeImage.naturalWidth) return;
+    event.preventDefault();
+    const factor = event.deltaY < 0 ? 1.12 : 0.89;
+    setScale(scale * factor, event.clientX, event.clientY);
+  }, { passive: false });
+
+  // 双击缩放
+  largeImage.addEventListener('dblclick', event => {
+    event.preventDefault();
+    if (scale > 1) resetZoom();
+    else setScale(2.5, event.clientX, event.clientY);
+  });
+
+  // 拖拽平移（仅缩放后）
+  largeImage.addEventListener('pointerdown', event => {
+    if (scale <= 1) return;
+    dragging = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    startTX = translateX;
+    startTY = translateY;
+    largeImage.setPointerCapture(event.pointerId);
+    applyTransform();
+  });
+  largeImage.addEventListener('pointermove', event => {
+    if (!dragging) return;
+    translateX = startTX + (event.clientX - dragStartX);
+    translateY = startTY + (event.clientY - dragStartY);
+    applyTransform();
+  });
+  const endDrag = (event: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    try { largeImage.releasePointerCapture(event.pointerId); } catch {}
+    applyTransform();
+  };
+  largeImage.addEventListener('pointerup', endDrag);
+  largeImage.addEventListener('pointercancel', endDrag);
+
   dialog.addEventListener('close', () => {
     document.body.style.overflow = savedOverflow;
     document.body.style.paddingRight = savedPadding;
+    resetZoom();
     opener?.focus({ preventScroll: true });
     scheduleCurrent();
   });
+
+  // 返回顶部：滚动超过一屏才出现，点击平滑回顶
+  const backToTop = reader.querySelector<HTMLButtonElement>('.back-to-top');
+  if (backToTop) {
+    const syncBackToTop = () => {
+      backToTop.hidden = scrollY < innerHeight * 0.8;
+    };
+    backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    });
+    addEventListener('scroll', syncBackToTop, { passive: true });
+    syncBackToTop();
+  }
 }
 
 export {};

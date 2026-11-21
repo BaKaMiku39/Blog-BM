@@ -1,0 +1,389 @@
+---
+import Base from '../layouts/Base.astro';
+import ProfileColumn from '../components/ProfileColumn.astro';
+import SiteSidebar from '../components/SiteSidebar.astro';
+import { Search, Dices, Copy, ArrowUpRight } from '@lucide/astro';
+import { config } from '../config';
+import { getPublicLinks } from '../lib/links';
+import { getSiteProfile } from '../lib/siteInfo';
+import { absoluteUrl, siteOrigin } from '../lib/site';
+
+const links = await getPublicLinks();
+const groups = [...new Set(links.map(link => link.group))];
+const contact = config.env.social.email;
+const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-|-$/g, '') || 'group';
+const hostOf = (url: string) => {
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return url; }
+};
+const dayLabel = (iso: string) => {
+  const time = Date.parse(iso || '');
+  if (!Number.isFinite(time)) return '';
+  return new Date(time).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit' }).replace(/\//g, '.');
+};
+const latest = links.reduce((max, link) => (link.updatedAt > max ? link.updatedAt : max), '');
+const latestLabel = latest
+  ? new Date(latest).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.')
+  : '—';
+const healthTitle = (link: (typeof links)[number]) => {
+  if (link.health === 'unknown') return '';
+  const when = link.checkedAt
+    ? new Date(link.checkedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    : '';
+  const state = link.health === 'ok' ? '访问正常' : '自动检测未通过（可能拦截了爬虫）';
+  return when ? `上次检测 ${when}：${state}` : state;
+};
+
+// 申请友链时对方要抄的信息：后台「站点资料」维护，读不到就回落站点配置
+const origin = siteOrigin(Astro.request, Astro.url);
+const profile = await getSiteProfile();
+type CardRow = { label: string; value: string; wrap?: boolean; plain?: boolean; url?: boolean };
+const publicBase = profile.url || origin;
+const avatarUrl = absoluteUrl(profile.avatar, publicBase);
+const previewUrl = absoluteUrl(profile.preview, publicBase);
+// 图片一律给完整地址：对方复制过去要能直接用，省得再自己拼域名
+const siteCard: CardRow[] = [
+  { label: '名称', value: profile.name },
+  { label: '地址', value: profile.url || `${origin}/`, url: true },
+  { label: '头像', value: avatarUrl, url: true },
+  { label: '首页图', value: previewUrl, url: true },
+  { label: '简介', value: profile.description, wrap: true },
+  { label: '标签', value: profile.tags.join(', '), plain: true }
+].filter(item => item.value);
+// 长地址在卡片里必然折行，优先断在斜杠后，别把 avatar.webp 从中间劈开
+const urlParts = (value: string) => value.split(/(?<=\/)/);
+---
+<Base title="友链" description="朋友们的站点与互联网上的小角落。">
+  <div class="shell home-grid links-grid">
+    <ProfileColumn />
+
+    <div class="main-column links-page">
+      <div class="page-intro">
+        <span class="eyebrow">FRIENDS</span>
+        <h1>朋友们的站点</h1>
+        <p>这里收集一些值得常去看看的角落，也会持续整理和检查。</p>
+      </div>
+
+      <div class="links-overview" aria-label="友链概览">
+        <div><b>{links.length}</b><span>收录站点</span></div>
+        <i aria-hidden="true">✦</i>
+        <div><b>{groups.length}</b><span>个分组</span></div>
+        <i aria-hidden="true">✦</i>
+        <div><b>{latestLabel}</b><span>最近更新</span></div>
+      </div>
+
+      {links.length > 0 && (
+        <div class="links-tools">
+          <label class="links-search">
+            <Search size={15} aria-hidden="true" />
+            <input type="search" placeholder="搜索站点、域名或标签" aria-label="搜索友链" data-links-search autocomplete="off" />
+            <kbd aria-hidden="true">/</kbd>
+          </label>
+          <button class="links-shuffle" type="button" data-links-shuffle title="随机去一位朋友家看看">
+            <Dices size={15} aria-hidden="true" />随机逛逛
+          </button>
+        </div>
+      )}
+
+      {links.length > 0 && (
+        <nav class="links-jump" aria-label="按分组筛选" data-links-jump>
+          <a href="#links-all" class="is-active" data-group="" aria-current="true">全部<span>{links.length}</span></a>
+          {groups.map(group => (
+            <a href={`#links-${slug(group)}`} data-group={group}>
+              {group}<span>{links.filter(link => link.group === group).length}</span>
+            </a>
+          ))}
+        </nav>
+      )}
+
+      {links.length > 0 && groups.map(group => (
+        <section class="links-group" id={`links-${slug(group)}`} data-group-section={group} aria-labelledby={`links-${slug(group)}-title`}>
+          <div class="links-group-head">
+            <h2 id={`links-${slug(group)}-title`}>{group}</h2>
+            <span>{links.filter(link => link.group === group).length} 个站点</span>
+          </div>
+          <div class="friend-grid">
+            {links.filter(link => link.group === group).map(link => (
+              <a
+                class="friend-card"
+                href={link.url}
+                target="_blank"
+                rel={`noopener noreferrer${link.nofollow ? ' nofollow' : ''}`}
+                aria-label={`访问 ${link.name}（新窗口打开）`}
+                data-link
+                data-group={link.group}
+                data-preview={link.preview || ''}
+                data-search={`${link.name} ${hostOf(link.url)} ${link.description} ${(link.tags || []).join(' ')} ${link.group}`.toLowerCase()}
+              >
+                <span class="friend-avatar">
+                  {link.avatar
+                    ? <img src={link.avatar} alt="" width="48" height="48" loading="lazy" />
+                    : <i aria-hidden="true">{link.name.slice(0, 1)}</i>}
+                </span>
+                <span class="friend-info">
+                  <span class="friend-title">
+                    <strong>{link.name}</strong>
+                    {link.health !== 'unknown' && (
+                      <i
+                        class="friend-health"
+                        data-health={link.health}
+                        title={healthTitle(link)}
+                        role="img"
+                        aria-label={link.health === 'ok' ? '链接状态正常' : '链接自动检测未通过'}
+                      ></i>
+                    )}
+                  </span>
+                  <small>{hostOf(link.url)}</small>
+                  {link.description && <p>{link.description}</p>}
+                  <span class="friend-meta">
+                    {link.tags?.length > 0 && (
+                      <span class="friend-tags">{link.tags.map(tag => <em>{tag}</em>)}</span>
+                    )}
+                    {dayLabel(link.createdAt) && <time datetime={link.createdAt}>收录 {dayLabel(link.createdAt)}</time>}
+                  </span>
+                </span>
+                <ArrowUpRight class="friend-go" size={15} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      <p class="links-filter-empty" data-links-empty hidden>没有匹配的站点，换个关键词或分组试试。</p>
+
+      {links.length === 0 && (
+        <div class="empty-state">
+          <p>友链还在整理中，这里很快就会热闹起来。</p>
+          {contact
+            ? <a href={`mailto:${contact}?subject=${encodeURIComponent('友链申请')}`}>想交换友链？给我发邮件</a>
+            : <a href="/about">先去关于页认识我</a>}
+        </div>
+      )}
+
+      <section class="friend-apply">
+        <div class="friend-apply__copy">
+          <h2>交换友链</h2>
+          <p>欢迎内容长期更新、访问稳定的个人站点。交换前请先在自己的站点加上本站链接，再写信告诉我你的站点名称、地址和一句介绍。</p>
+          <ul class="friend-apply__rules">
+            <li>原创内容为主，能持续更新</li>
+            <li>站点可正常访问，没有强制跳转</li>
+            <li>已在贵站放上本站链接</li>
+          </ul>
+          {contact && <a class="apply-button" href={`mailto:${contact}?subject=${encodeURIComponent('友链申请')}`}>申请友链</a>}
+        </div>
+
+        <div class="site-card">
+          <div class="site-card__head">
+            <span>本站信息</span>
+            <button class="site-card__copy" type="button" data-copy-all>
+              <Copy size={13} aria-hidden="true" />复制全部
+            </button>
+          </div>
+          <dl>
+            {siteCard.map(item => (
+              <div class:list={[{ 'is-wrap': item.wrap, 'is-plain': item.plain }]}>
+                <dt>{item.label}</dt>
+                <dd>
+                  <span>
+                    {item.url
+                      ? urlParts(item.value).map((part, index, all) => (
+                          <Fragment>{part}{index < all.length - 1 && <wbr />}</Fragment>
+                        ))
+                      : item.value}
+                  </span>
+                  <button type="button" data-copy={item.value} aria-label={`复制${item.label}`} title={`复制${item.label}`}>
+                    <Copy size={12} aria-hidden="true" />
+                  </button>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+    </div>
+
+    <SiteSidebar statsTitleId="links-site-stats-title" />
+  </div>
+</Base>
+
+<script>
+  (() => {
+    const search = document.querySelector<HTMLInputElement>('[data-links-search]');
+    const cards = [...document.querySelectorAll<HTMLAnchorElement>('[data-link]')];
+    const sections = [...document.querySelectorAll<HTMLElement>('[data-group-section]')];
+    const chips = [...document.querySelectorAll<HTMLAnchorElement>('[data-links-jump] [data-group]')];
+    const empty = document.querySelector<HTMLElement>('[data-links-empty]');
+    const shuffle = document.querySelector<HTMLButtonElement>('[data-links-shuffle]');
+    if (!cards.length) return;
+
+    let group = '';
+
+    const apply = () => {
+      const query = (search?.value || '').trim().toLowerCase();
+      let shown = 0;
+      cards.forEach(card => {
+        const hit = (!query || (card.dataset.search || '').includes(query)) && (!group || card.dataset.group === group);
+        card.hidden = !hit;
+        if (hit) shown += 1;
+      });
+      sections.forEach(section => {
+        section.hidden = ![...section.querySelectorAll<HTMLElement>('[data-link]')].some(card => !card.hidden);
+      });
+      if (empty) empty.hidden = shown > 0;
+    };
+
+    search?.addEventListener('input', apply);
+
+    chips.forEach(chip => {
+      chip.addEventListener('click', event => {
+        event.preventDefault();
+        group = chip.dataset.group || '';
+        chips.forEach(item => {
+          item.classList.toggle('is-active', item === chip);
+          if (item === chip) item.setAttribute('aria-current', 'true');
+          else item.removeAttribute('aria-current');
+        });
+        apply();
+      });
+    });
+
+    shuffle?.addEventListener('click', () => {
+      const pool = cards.filter(card => !card.hidden);
+      if (!pool.length) return;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      pick.classList.add('is-picked');
+      setTimeout(() => pick.classList.remove('is-picked'), 1400);
+      window.open(pick.href, '_blank', 'noopener,noreferrer');
+    });
+
+    // 按 / 直接聚焦搜索框；Esc 清空
+    document.addEventListener('keydown', event => {
+      const target = event.target as HTMLElement | null;
+      const typing = target && /^(input|textarea|select)$/i.test(target.tagName);
+      if (event.key === '/' && !typing) {
+        event.preventDefault();
+        search?.focus();
+      }
+      if (event.key === 'Escape' && document.activeElement === search && search?.value) {
+        search.value = '';
+        apply();
+      }
+    });
+
+    /* ---------- 复制本站信息 ---------- */
+    const flash = (button: HTMLElement) => {
+      if (button.dataset.copied) return;
+      const original = button.innerHTML;
+      button.dataset.copied = '1';
+      button.innerHTML = '<span aria-hidden="true">✓</span>已复制';
+      setTimeout(() => {
+        button.innerHTML = original;
+        delete button.dataset.copied;
+      }, 1600);
+    };
+
+    const copy = async (text: string, button: HTMLElement) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        flash(button);
+      } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.append(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        area.remove();
+        if (ok) flash(button);
+      }
+    };
+
+    document.querySelectorAll<HTMLElement>('[data-copy]').forEach(button => {
+      button.addEventListener('click', () => copy(button.dataset.copy || '', button));
+    });
+
+    document.querySelector<HTMLElement>('[data-copy-all]')?.addEventListener('click', event => {
+      const button = event.currentTarget as HTMLElement;
+      const rows = [...document.querySelectorAll<HTMLElement>('.site-card dl > div')].map(row => {
+        const label = row.querySelector('dt')?.textContent?.trim() || '';
+        // 卡片里同域图片只显示路径，复制要用按钮上的完整地址
+        const value = row.querySelector<HTMLElement>('dd button')?.dataset.copy
+          || row.querySelector('dd span')?.textContent?.trim()
+          || '';
+        return `${label}：${value}`;
+      });
+      copy(rows.join('\n'), button);
+    });
+
+    /* ---------- 悬停看站点首图 ---------- */
+    // 只在真有指针悬停的设备上跑；触屏没有 hover，避免点一下弹图挡住跳转
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const peekCards = cards.filter(card => card.dataset.preview);
+    if (!peekCards.length) return;
+
+    const peek = document.createElement('div');
+    peek.className = 'link-peek';
+    peek.setAttribute('aria-hidden', 'true');
+    peek.innerHTML = '<img alt="" decoding="async" /><span class="link-peek__bar"><b></b><i></i></span>';
+    document.body.append(peek);
+    const peekImg = peek.querySelector('img')!;
+    const peekName = peek.querySelector('b')!;
+    const peekHost = peek.querySelector('i')!;
+
+    const W = 320;
+    const H = 236;
+    const GAP = 12;
+    let peekTimer = 0;
+    let currentCard: HTMLAnchorElement | null = null;
+
+    const placePeek = (card: HTMLAnchorElement) => {
+      const rect = card.getBoundingClientRect();
+      let x = rect.right + GAP;
+      if (x + W > innerWidth - GAP) x = rect.left - W - GAP;
+      if (x < GAP) x = Math.min(Math.max(rect.left, GAP), innerWidth - W - GAP);
+      let y = rect.top + rect.height / 2 - H / 2;
+      y = Math.min(Math.max(y, 78), innerHeight - H - GAP);
+      peek.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    };
+
+    const showPeek = (card: HTMLAnchorElement) => {
+      currentCard = card;
+      const url = card.dataset.preview || '';
+      if (peekImg.getAttribute('src') !== url) {
+        peek.classList.remove('is-loaded');
+        peekImg.src = url;
+      }
+      peekName.textContent = card.querySelector('strong')?.textContent || '';
+      peekHost.textContent = card.querySelector('small')?.textContent || '';
+      placePeek(card);
+      peek.classList.add('is-visible');
+      if (peekImg.complete && peekImg.naturalWidth > 0) peek.classList.add('is-loaded');
+    };
+
+    const hidePeek = () => {
+      currentCard = null;
+      peek.classList.remove('is-visible');
+    };
+
+    peekImg.addEventListener('load', () => peek.classList.add('is-loaded'));
+    peekImg.addEventListener('error', () => peek.classList.remove('is-loaded'));
+
+    peekCards.forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        clearTimeout(peekTimer);
+        peekTimer = window.setTimeout(() => showPeek(card), 220);
+      });
+      card.addEventListener('mouseleave', () => {
+        clearTimeout(peekTimer);
+        if (currentCard === card) hidePeek();
+      });
+      card.addEventListener('focus', () => showPeek(card));
+      card.addEventListener('blur', () => {
+        if (currentCard === card) hidePeek();
+      });
+    });
+
+    addEventListener('scroll', () => { if (currentCard) placePeek(currentCard); }, { passive: true });
+  })();
+</script>

@@ -1,0 +1,25 @@
+---
+/**
+ * 右栏：时间名片 + 播放器挂载位 + 站点统计 + 站点信息。
+ *
+ * 首页与友链页共用同一份，改这里两边一起变；不要在各页面里复制粘贴。
+ * 外层必须是 aside.sidebar —— 布局靠 `.home-grid > .sidebar` 定位。
+ */
+import DayCard from './DayCard.astro';
+import SiteStatsCard from './SiteStatsCard.astro';
+import SiteInfo from './SiteInfo.astro';
+import { config } from '../config';
+
+interface Props {
+  /** 同页可能出现多份统计卡时用来区分 aria-labelledby */
+  statsTitleId?: string;
+}
+
+const { statsTitleId = 'site-stats-title' } = Astro.props;
+---
+<aside class="sidebar">
+  <DayCard />
+  {config.env.features.bgm && <div class="bgm-slot" data-bgm-slot></div>}
+  <SiteStatsCard titleId={statsTitleId} />
+  <SiteInfo />
+</aside>

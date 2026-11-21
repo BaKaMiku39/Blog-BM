@@ -1,10 +1,10 @@
 ---
 import '../styles/global.css';
-import { ArrowUp, BookOpenText, House, Moon, Search, Sun, UserRound } from '@lucide/astro';
+import { ArrowUp, BookOpenText, House, Link, Moon, Search, Sun, UserRound } from '@lucide/astro';
 import { absoluteUrl, siteOrigin } from '../lib/site';
 import FortuneDraw from '../components/FortuneDraw.astro';
 import BgmPlayer from '../components/BgmPlayer.astro';
-import { recordVisit, visitStats } from '../lib/visits';
+import { runningDays } from '../lib/visits';
 import { config } from '../config';
 
 const { site } = config;
@@ -28,15 +28,14 @@ const fullTitle = `${title} · ${site.name}`;
 const navActive = (key: string) =>
   key === 'home' ? path === '/' :
   key === 'articles' ? path === '/articles' || path.startsWith('/posts/') :
+  key === 'links' ? path === '/links' :
   key === 'about' ? path === '/about' :
   false;
-const navIcon = { home: House, articles: BookOpenText, about: UserRound } as const;
+const navIcon = { home: House, articles: BookOpenText, links: Link, about: UserRound } as const;
 
-// 访问统计：每个 SSR 页面记一次（后台与 API 不走这里）；nginx 需要传 X-Forwarded-For，否则按直连地址去重
-const ua = Astro.request.headers.get('user-agent') || '';
-const ip = Astro.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || Astro.clientAddress || '';
-if (config.env.features.visits && !path.startsWith('/admin')) recordVisit(ip, ua);
-const visits = visitStats();
+// V1.0.1：访客数字由 public/visits-umami.js 在浏览器端从 Umami 取回；
+// 这里只负责 SSR 直出「已运行天数」，其余 4 个数字先输出占位符。
+const days = runningDays();
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -115,18 +114,36 @@ const visits = visitStats();
     <footer class="site-footer">
       {config.env.features.visits && (
       <div class="shell footer-stats" aria-label="访问统计">
-        <span>今日访客：<b>{visits.todayVisitors}</b></span><i aria-hidden="true">✦</i>
-        <span>今日访问：<b>{visits.todayViews}</b></span><i aria-hidden="true">✦</i>
-        <span>本站访客：<b>{visits.totalVisitors}</b></span><i aria-hidden="true">✦</i>
-        <span>本站访问：<b>{visits.totalViews}</b></span><i aria-hidden="true">✦</i>
-        <span>已运行：<b>{visits.runningDays} 天</b></span>
+        <span>今日访客：<b data-umami-stat="todayVisitors">—</b></span><i aria-hidden="true">✦</i>
+        <span>今日访问：<b data-umami-stat="todayPageviews">—</b></span><i aria-hidden="true">✦</i>
+        <span>本站访客：<b data-umami-stat="visitors">—</b></span><i aria-hidden="true">✦</i>
+        <span>本站访问：<b data-umami-stat="pageviews">—</b></span><i aria-hidden="true">✦</i>
+        <span>已运行：<b>{days} 天</b></span>
       </div>
       )}
-      <div class="shell footer-inner"><div class="footer-brand"><strong>{site.name}</strong><p>{site.tagline}</p></div><nav class="footer-nav" aria-label="页脚导航">{site.footerNav.map(item => <a href={item.href}>{item.label}</a>)}</nav><div class="footer-records"><span>{icp || site.records.icpPlaceholder}</span><span>{moeIcp || site.records.moePlaceholder}</span><small>© {new Date().getFullYear()} {site.name}</small></div></div>
+      <div class="shell footer-inner"><div class="footer-brand"><strong>{site.name}</strong><p>{site.tagline}</p></div><nav class="footer-nav" aria-label="页脚导航">{site.footerNav.map(item => <a href={item.href}>{item.label}</a>)}</nav><div class="footer-records"><small>© {new Date().getFullYear()} {site.name}</small></div></div>
+      <!-- 备案信息：工信部要求放在首页底部居中，并链接到 beian.miit.gov.cn；
+           萌ICP备是 icp.gov.moe 的自娱备案，跟着一起排，纯装饰 -->
+      {(icp || moeIcp || site.moeIcp) && (
+      <div class="shell footer-legal">
+        {icp && <a class="footer-legal__item footer-legal__item--icp" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer"><img src="/beian/icp.png" alt="" width="14" height="14" loading="lazy" decoding="async" />{icp}</a>}
+        {icp && (moeIcp || site.moeIcp) && <i aria-hidden="true">·</i>}
+        {moeIcp && <a class="footer-legal__item footer-legal__item--mps" href="https://beian.mps.gov.cn" target="_blank" rel="noopener noreferrer"><img src="/beian/mps.png" alt="" width="14" height="14" loading="lazy" decoding="async" />{moeIcp}</a>}
+        {moeIcp && site.moeIcp && <i aria-hidden="true">·</i>}
+        {site.moeIcp && <a class="footer-legal__item footer-legal__item--moe footer-moe-icp" href={site.moeIcp.href} target="_blank" rel="noopener noreferrer nofollow" title="萌ICP备 · icp.gov.moe"><img src="/beian/moe.svg" alt="" width="14" height="14" loading="lazy" decoding="async" />{site.moeIcp.label}</a>}
+      </div>
+      )}
     </footer>
     <button class="back-to-top" type="button" aria-label="回到顶部" title="回到顶部"><ArrowUp size={18} aria-hidden="true" /></button>
     {config.env.features.bgm && <BgmPlayer />}
     <script is:inline src="/ambient.js"></script>
+    {config.env.features.visits && import.meta.env.PROD && (
+      <>
+        {/* Umami 打点：同源 /stats/ 由 nginx 反代到本机 3010，无跨域 */}
+        <script is:inline defer src="/stats/script.js" data-website-id="6fccc55c-bf0d-48e7-a21f-78fae2c524a5"></script>
+        <script is:inline defer src="/visits-umami.js"></script>
+      </>
+    )}
     <script is:inline>
       const root = document.documentElement;
       const systemDark = matchMedia('(prefers-color-scheme: dark)');
