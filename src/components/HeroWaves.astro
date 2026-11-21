@@ -1,0 +1,18 @@
+---
+// 首页 Hero 与文章区之间的水波过渡：四层同源波浪视差漂移，
+// 前三层半透明制造景深，末层实色 --wash 保证底部与内容区无缝衔接。
+// 手法参考 rainzt.cn 的 header-waves（经典 CodePen gentle-wave 变体）。
+---
+<div class="hero-waves" aria-hidden="true">
+  <svg class="hero-waves__svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="geometricPrecision" focusable="false">
+    <defs>
+      <path id="hero-gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z" />
+    </defs>
+    <g class="hero-waves__parallax">
+      <use href="#hero-gentle-wave" x="48" y="0" />
+      <use href="#hero-gentle-wave" x="48" y="3" />
+      <use href="#hero-gentle-wave" x="48" y="5" />
+      <use href="#hero-gentle-wave" x="48" y="7" />
+    </g>
+  </svg>
+</div>
