@@ -69,9 +69,10 @@ await page.ready;
 await page.send('Page.enable');
 await page.send('Runtime.enable');
 
-await shoot(page, { name: '1440-seam', width: 1440, height: 900, scroll: 420 });
-await shoot(page, { name: '1440-seam-dark', width: 1440, height: 900, dark: true, scroll: 420 });
-await shoot(page, { name: '390-seam', width: 390, height: 844, scroll: 400 });
-await shoot(page, { name: '1280-seam', width: 1280, height: 800, scroll: 380 });
+const SCROLL = Number(process.env.SCROLL || 420);
+await shoot(page, { name: '1440-seam', width: 1440, height: 900, scroll: SCROLL });
+await shoot(page, { name: '1440-seam-dark', width: 1440, height: 900, dark: true, scroll: SCROLL });
+await shoot(page, { name: '390-seam', width: 390, height: 844, scroll: SCROLL });
+await shoot(page, { name: '1280-seam', width: 1280, height: 800, scroll: SCROLL });
 
 chrome.kill();

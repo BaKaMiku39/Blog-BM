@@ -350,6 +350,11 @@ html { scroll-behavior: smooth; }
 .hero-waves__parallax > use:nth-child(3) { opacity: .65; animation-delay: -31s; animation-duration: 58s; }
 .hero-waves__parallax > use:nth-child(4) { opacity: .75; animation-delay: -63s; animation-duration: 72s; }
 @keyframes hero-wave-drift { 0% { transform: translate3d(-90px, 0, 0); } 100% { transform: translate3d(85px, 0, 0); } }
+.hero-stickers { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.hero-sticker { position: absolute; left: var(--sx); top: var(--sy); height: var(--sh); transform: translate(-50%, -50%) rotate(var(--sr, 0deg)); pointer-events: auto; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; filter: drop-shadow(0 8px 16px #1d3a5f3d); transition: filter .2s ease; }
+.hero-sticker:hover { filter: drop-shadow(0 10px 20px #1d3a5f55); }
+.hero-sticker.is-dragging { cursor: grabbing; filter: drop-shadow(0 14px 24px #1d3a5f59); }
+.hero-sticker img { display: block; height: 100%; width: auto; pointer-events: none; -webkit-user-drag: none; }
 .home-page .home-grid.shell { margin-top: 0; padding-top: 24px; scroll-margin-top: 76px; }
 .home-page .home-grid.shell { min-height: calc(100dvh - 76px); }
 :root[data-theme=dark] .hero.hero-illustrated::before { background: linear-gradient(180deg, rgba(7,16,32,.6) 0%, rgba(7,16,32,.36) 9%, rgba(7,16,32,.1) 20%, transparent 30%), linear-gradient(90deg, rgba(18,33,57,.8), rgba(25,44,73,.5) 38%, rgba(24,41,66,.1) 100%); }

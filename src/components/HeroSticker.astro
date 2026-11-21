@@ -1,0 +1,128 @@
+---
+// Hero 可拖动贴纸层。每张贴纸在 stickers 数组里一条配置即可：
+// id 唯一（用于记忆位置）、x/y 为相对 hero 的百分比锚点（贴纸中心），
+// height 用 clamp 随视口缩放，rotate 是固定倾角。
+// 拖动后的位置按 id 存 localStorage，双击贴纸恢复默认位置。
+interface Sticker {
+  id: string;
+  src: string;
+  alt: string;
+  /** 相对 hero 宽度的百分比（贴纸中心） */
+  x: number;
+  /** 相对 hero 高度的百分比（贴纸中心） */
+  y: number;
+  height: string;
+  rotate?: number;
+}
+const stickers: Sticker[] = [
+  {
+    id: 'chibi-spring',
+    src: '/stickers/miku-chibi.webp',
+    alt: '',
+    x: 13.5,
+    y: 19,
+    height: 'clamp(104px, 17vh, 168px)',
+    rotate: -4,
+  },
+];
+---
+<div class="hero-stickers" aria-hidden="true">
+  {stickers.map(sticker => (
+    <div
+      class="hero-sticker"
+      data-sticker-id={sticker.id}
+      data-default-x={sticker.x}
+      data-default-y={sticker.y}
+      style={`--sx:${sticker.x}%; --sy:${sticker.y}%; --sh:${sticker.height}; --sr:${sticker.rotate ?? 0}deg;`}
+    >
+      <img src={sticker.src} alt={sticker.alt} draggable="false" loading="lazy" />
+    </div>
+  ))}
+</div>
+
+<script>
+  // 可拖动贴纸：Pointer Events 统一鼠标/触摸，位置按百分比记忆
+  const STORAGE_KEY = 'hero-stickers:v1';
+  const stickers = Array.from(document.querySelectorAll<HTMLElement>('.hero-sticker'));
+  const hero = stickers[0]?.closest<HTMLElement>('.hero');
+
+  const readSaved = (): Record<string, { x: number; y: number }> => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  };
+  const save = (map: Record<string, { x: number; y: number }>) => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(map)); } catch { /* 隐私模式等场景忽略 */ }
+  };
+
+  const apply = (el: HTMLElement, x: number, y: number) => {
+    el.style.setProperty('--sx', `${x.toFixed(2)}%`);
+    el.style.setProperty('--sy', `${y.toFixed(2)}%`);
+  };
+
+  // 恢复上次拖动的位置
+  if (stickers.length && hero) {
+    const saved = readSaved();
+    for (const el of stickers) {
+      const id = el.dataset.stickerId || '';
+      const pos = saved[id];
+      if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) apply(el, pos.x, pos.y);
+    }
+  }
+
+  for (const el of stickers) {
+    const id = el.dataset.stickerId || '';
+    const defaultX = Number(el.dataset.defaultX);
+    const defaultY = Number(el.dataset.defaultY);
+
+    el.addEventListener('pointerdown', (event: PointerEvent) => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      const rect = hero!.getBoundingClientRect();
+      const size = el.getBoundingClientRect();
+      const halfW = size.width / 2;
+      const halfH = size.height / 2;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const originX = parseFloat(el.style.getPropertyValue('--sx')) || defaultX;
+      const originY = parseFloat(el.style.getPropertyValue('--sy')) || defaultY;
+      let moved = false;
+
+      try { el.setPointerCapture(event.pointerId); } catch { /* 合成事件等场景忽略 */ }
+      el.classList.add('is-dragging');
+
+      const onMove = (move: PointerEvent) => {
+        const dx = ((move.clientX - startX) / rect.width) * 100;
+        const dy = ((move.clientY - startY) / rect.height) * 100;
+        if (Math.abs(move.clientX - startX) + Math.abs(move.clientY - startY) > 3) moved = true;
+        // 中心点限制在 hero 内，留半个身位防止拖出去找不回
+        const x = Math.min(Math.max(originX + dx, (halfW / rect.width) * 100), 100 - (halfW / rect.width) * 100);
+        const y = Math.min(Math.max(originY + dy, (halfH / rect.height) * 100), 100 - (halfH / rect.height) * 100);
+        apply(el, x, y);
+      };
+
+      const onUp = () => {
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+        el.removeEventListener('pointercancel', onUp);
+        el.classList.remove('is-dragging');
+        if (!moved) return;
+        const map = readSaved();
+        map[id] = {
+          x: parseFloat(el.style.getPropertyValue('--sx')),
+          y: parseFloat(el.style.getPropertyValue('--sy')),
+        };
+        save(map);
+      };
+
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onUp);
+    });
+
+    // 双击恢复默认位置
+    el.addEventListener('dblclick', () => {
+      apply(el, defaultX, defaultY);
+      const map = readSaved();
+      delete map[id];
+      save(map);
+    });
+  }
+</script>

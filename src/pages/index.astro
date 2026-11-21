@@ -4,6 +4,7 @@ import PostCard from '../components/PostCard.astro';
 import ProfileColumn from '../components/ProfileColumn.astro';
 import SiteSidebar from '../components/SiteSidebar.astro';
 import HeroWaves from '../components/HeroWaves.astro';
+import HeroSticker from '../components/HeroSticker.astro';
 import { getCategories, getPosts, resolveCategory } from '../lib/posts';
 import { config } from '../config';
 const categories = await getCategories();
@@ -34,7 +35,7 @@ const latestPost = posts[0];
 const latestLabel = latestPost ? latestPost.date.replace(/-/g, '.') : '—';
 ---
 <Base title="首页">
-  <section class="hero hero-illustrated"><div class="hero-art" aria-hidden="true"><picture><source media="(max-width: 600px) and (orientation: portrait)" srcset="/images/hero-spring-portrait.webp" width="600" height="941" /><img src="/images/hero-spring.webp" alt="" width="1671" height="941" fetchpriority="high" /></picture></div><div class="shell hero-content"><span class="hero-kicker">{config.site.kicker}</span><h1>在这里，<br /><span class="hero-title-accent">记录热爱与思考。</span></h1><p class="hero-lede">欢迎来到 BaKaMiku 的个人博客。<br class="hero-copy-break" />写代码，也写喜欢的世界。</p><div class="hero-actions"><a class="primary-button" href="#articles">开始阅读 <span aria-hidden="true">→</span></a><a class="hero-ghost" href="/about">关于我 <span aria-hidden="true">↗</span></a></div><div class="hero-stats"><div class="hero-stat"><b>{posts.length}</b><span>篇文章</span></div><div class="hero-stat"><b>{categories.length}</b><span>个分类</span></div><div class="hero-stat"><b>{latestLabel}</b><span>最近更新</span></div></div></div><a class="hero-scroll" href="#articles" aria-label="向下阅读文章"><span>向下，发现更多</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></a><HeroWaves /></section>
+  <section class="hero hero-illustrated"><div class="hero-art" aria-hidden="true"><picture><source media="(max-width: 600px) and (orientation: portrait)" srcset="/images/hero-spring-portrait.webp" width="600" height="941" /><img src="/images/hero-spring.webp" alt="" width="1671" height="941" fetchpriority="high" /></picture></div><div class="shell hero-content"><span class="hero-kicker">{config.site.kicker}</span><h1>在这里，<br /><span class="hero-title-accent">记录热爱与思考。</span></h1><p class="hero-lede">欢迎来到 BaKaMiku 的个人博客。<br class="hero-copy-break" />写代码，也写喜欢的世界。</p><div class="hero-actions"><a class="primary-button" href="#articles">开始阅读 <span aria-hidden="true">→</span></a><a class="hero-ghost" href="/about">关于我 <span aria-hidden="true">↗</span></a></div><div class="hero-stats"><div class="hero-stat"><b>{posts.length}</b><span>篇文章</span></div><div class="hero-stat"><b>{categories.length}</b><span>个分类</span></div><div class="hero-stat"><b>{latestLabel}</b><span>最近更新</span></div></div></div><a class="hero-scroll" href="#articles" aria-label="向下阅读文章"><span>向下，发现更多</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></a><HeroWaves /><HeroSticker /></section>
   <div id="articles" class="shell home-grid">
     <ProfileColumn />
     <div class="main-column">
