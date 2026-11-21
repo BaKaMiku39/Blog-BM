@@ -111,8 +111,8 @@
 .article-reader .prose > :first-child { margin-top: 0; }
 .article-reader .prose > :last-child { margin-bottom: 0; }
 .article-reader .prose > p { margin: 0 0 1.4em; }
-.article-reader .article-cover { margin-bottom: 26px; border-radius: 14px; overflow: hidden; }
-.article-reader .article-cover img { border-radius: 0; box-shadow: none; }
+.article-reader .article-cover { margin-bottom: 26px; border-radius: 14px; overflow: hidden; height: auto; }
+.article-reader .article-cover img { border-radius: 0; box-shadow: none; width: 100%; height: auto; max-height: min(62vh, 520px); object-fit: cover; }
 .prose figure { margin: 26px 0; }
 .prose figure > img { display: block; margin: 0 auto; }
 .prose figcaption { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.8; text-align: center; overflow-wrap: anywhere; }
