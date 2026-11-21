@@ -1,21 +1,19 @@
 ---
-// 首页 Hero 与文章区之间的水波过渡：四层异形波浪 + 随机相位漂移。
-// 前三层半透明制造景深，末层实色 --wash 保证底部与内容区无缝衔接。
-// 两条不同振幅的 path 交替，避免四层看起来像同一条曲线叠印；
-// 相位由脚本在每次加载时随机，CSS 里保留一组错开的回退值（无 JS 也可看）。
-// 手法参考 rainzt.cn 的 header-waves（经典 CodePen gentle-wave 变体）。
+// 首页 Hero 与文章区之间的水波过渡。
+// 四层同形波浪全部半透明（25/50/65/75），叠加处透明度累积成实底，
+// 未叠加处透出插画 —— 与 l3thargy.cn / rainzt.cn 的 header-waves 一致。
+// x 偏移让首帧四层相位均匀错开（0/0.25/0.5/0.75），脚本再按次随机相位。
 ---
 <div class="hero-waves" aria-hidden="true">
   <svg class="hero-waves__svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="geometricPrecision" focusable="false">
     <defs>
-      <path id="hero-wave-a" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v48h-352z" />
-      <path id="hero-wave-b" d="M-160 47c26 0 60-12 88-12s62 12 88 12 60-12 88-12 62 12 88 12v46h-352z" />
+      <path id="hero-gentle-wave" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18 v48h-352z" />
     </defs>
     <g class="hero-waves__parallax">
-      <use href="#hero-wave-b" x="48" y="0" />
-      <use href="#hero-wave-a" x="48" y="5" />
-      <use href="#hero-wave-b" x="48" y="9" />
-      <use href="#hero-wave-a" x="48" y="13" />
+      <use href="#hero-gentle-wave" x="-42" y="0" />
+      <use href="#hero-gentle-wave" x="2.641" y="3" />
+      <use href="#hero-gentle-wave" x="48.944" y="5" />
+      <use href="#hero-gentle-wave" x="92.468" y="7" />
     </g>
   </svg>
 </div>
